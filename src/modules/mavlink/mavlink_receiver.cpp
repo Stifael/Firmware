@@ -267,6 +267,10 @@ MavlinkReceiver::handle_message(mavlink_message_t *msg)
 		handle_message_serial_control(msg);
 		break;
 
+	case MAVLINK_MSG_ID_AVOIDANCE_TRIPLET:
+		handle_message_avoidance_triplet(msg);
+		break;
+
 	default:
 		break;
 	}
@@ -338,6 +342,48 @@ MavlinkReceiver::evaluate_target_ok(int command, int target_system, int target_c
 	}
 
 	return target_ok;
+}
+
+
+void
+MavlinkReceiver::handle_message_avoidance_triplet(mavlink_message_t *msg)
+{
+	mavlink_avoidance_triplet_t avoidance_triplet;
+	mavlink_msg_avoidance_triplet_decode(msg, &avoidance_triplet);
+
+	struct avoidance_triplet_s f = {};
+	memset(&f, 0, sizeof(f));
+
+	f.timestamp = hrt_absolute_time();
+	f.time_us = avoidance_triplet.time_usec;
+	f.gen_count = avoidance_triplet.gen_count;
+
+	f.prev_pt[0] = avoidance_triplet.prev_x;
+	f.prev_pt[1] = avoidance_triplet.prev_y;
+	f.prev_pt[2] = avoidance_triplet.prev_z;
+
+	f.ctrl_pt[0] = avoidance_triplet.ctrl_x;
+	f.ctrl_pt[1] = avoidance_triplet.ctrl_y;
+	f.ctrl_pt[2] = avoidance_triplet.ctrl_z;
+
+	f.next_pt[0] = avoidance_triplet.next_x;
+	f.next_pt[1] = avoidance_triplet.next_y;
+	f.next_pt[2] = avoidance_triplet.next_z;
+
+	f.delta_t = avoidance_triplet.delta_t;
+	f.max_acc = avoidance_triplet.max_acc;
+	f.acc_per_err = avoidance_triplet.acc_per_err;
+
+	if (_avoidance_triplet_pub == nullptr){
+
+		_avoidance_triplet_pub = orb_advertise(ORB_ID(avoidance_triplet), &f);
+
+	}else {
+
+		orb_publish(ORB_ID(avoidance_triplet), _avoidance_triplet_pub, &f);
+	}
+
+
 }
 
 void

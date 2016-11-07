@@ -77,6 +77,7 @@
 #include <uORB/topics/follow_target.h>
 #include <uORB/topics/transponder_report.h>
 #include <uORB/topics/gps_inject_data.h>
+#include <uORB/topics/avoidance_triplet.h>
 
 #include "mavlink_ftp.h"
 
@@ -144,6 +145,7 @@ private:
 	void handle_message_gps_rtcm_data(mavlink_message_t *msg);
 	void handle_message_battery_status(mavlink_message_t *msg);
 	void handle_message_serial_control(mavlink_message_t *msg);
+	void handle_message_avoidance_triplet(mavlink_message_t *msg);
 
 	void *receive_thread(void *arg);
 
@@ -218,6 +220,8 @@ private:
 	orb_advert_t _time_offset_pub;
 	orb_advert_t _follow_target_pub;
 	orb_advert_t _transponder_report_pub;
+	orb_advert_t _avoidance_triplet_pub;
+
 	static const int _gps_inject_data_pub_size = 4;
 	orb_advert_t _gps_inject_data_pub[_gps_inject_data_pub_size];
 	int _gps_inject_data_next_idx = 0;

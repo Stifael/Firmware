@@ -3035,6 +3035,10 @@ protected:
 	}
 };
 
+
+
+
+
 class MavlinkStreamAltitude : public MavlinkStream
 {
 public:
