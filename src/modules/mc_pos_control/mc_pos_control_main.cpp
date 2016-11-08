@@ -76,6 +76,7 @@
 #include <uORB/topics/vehicle_global_velocity_setpoint.h>
 #include <uORB/topics/vehicle_local_position_setpoint.h>
 #include <uORB/topics/vehicle_land_detected.h>
+#include <uORB/topics/avoidance_triplet.h>
 
 #include <systemlib/systemlib.h>
 #include <systemlib/mavlink_log.h>
@@ -139,6 +140,7 @@ private:
 	int		_pos_sp_triplet_sub;		/**< position setpoint triplet */
 	int		_local_pos_sp_sub;		/**< offboard local position setpoint */
 	int		_global_vel_sp_sub;		/**< offboard global velocity setpoint */
+	int 	_avoidance_triplet_sub;
 
 	orb_advert_t	_att_sp_pub;			/**< attitude setpoint publication */
 	orb_advert_t	_local_pos_sp_pub;		/**< vehicle local position setpoint publication */
@@ -157,6 +159,7 @@ private:
 	struct position_setpoint_triplet_s		_pos_sp_triplet;	/**< vehicle global position setpoint triplet */
 	struct vehicle_local_position_setpoint_s	_local_pos_sp;		/**< vehicle local position setpoint */
 	struct vehicle_global_velocity_setpoint_s	_global_vel_sp;		/**< vehicle global velocity setpoint */
+	struct avoidance_triplet_s _avoidance_triplet_sp;
 
 	control::BlockParamFloat _manual_thr_min;
 	control::BlockParamFloat _manual_thr_max;
@@ -368,6 +371,7 @@ MulticopterPositionControl::MulticopterPositionControl() :
 	_local_pos_sub(-1),
 	_pos_sp_triplet_sub(-1),
 	_global_vel_sp_sub(-1),
+	_avoidance_triplet_sub(-1),
 
 	/* publications */
 	_att_sp_pub(nullptr),
@@ -385,6 +389,7 @@ MulticopterPositionControl::MulticopterPositionControl() :
 	_pos_sp_triplet{},
 	_local_pos_sp{},
 	_global_vel_sp{},
+	_avoidance_triplet_sp{},
 	_manual_thr_min(this, "MANTHR_MIN"),
 	_manual_thr_max(this, "MANTHR_MAX"),
 	_vel_x_deriv(this, "VELD"),
@@ -690,6 +695,13 @@ MulticopterPositionControl::poll_subscriptions()
 
 	if (updated) {
 		orb_copy(ORB_ID(vehicle_local_position), _local_pos_sub, &_local_pos);
+	}
+
+
+	orb_check(_avoidance_triplet_sub, &updated);
+
+	if (updated) {
+		orb_copy(ORB_ID(avoidance_triplet), _avoidance_triplet_sub, &_avoidance_triplet_sp);
 	}
 }
 
@@ -1239,6 +1251,7 @@ MulticopterPositionControl::task_main()
 	_pos_sp_triplet_sub = orb_subscribe(ORB_ID(position_setpoint_triplet));
 	_local_pos_sp_sub = orb_subscribe(ORB_ID(vehicle_local_position_setpoint));
 	_global_vel_sp_sub = orb_subscribe(ORB_ID(vehicle_global_velocity_setpoint));
+	_avoidance_triplet_sub = orb_subscribe(ORB_ID(avoidance_triplet));
 
 
 	parameters_update(true);
@@ -1311,6 +1324,8 @@ MulticopterPositionControl::task_main()
 			reset_int_xy = true;
 			reset_yaw_sp = true;
 		}
+
+		PX4_INFO("timestamp avoidance: %.6f", (double)_avoidance_triplet_sp.timestamp);
 
 		/* reset yaw and altitude setpoint for VTOL which are in fw mode */
 		if (_vehicle_status.is_vtol) {

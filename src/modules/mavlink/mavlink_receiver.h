@@ -78,6 +78,7 @@
 #include <uORB/topics/transponder_report.h>
 #include <uORB/topics/gps_inject_data.h>
 #include <uORB/topics/control_state.h>
+#include <uORB/topics/avoidance_triplet.h>
 
 
 #include "mavlink_ftp.h"
@@ -147,6 +148,7 @@ private:
 	void handle_message_battery_status(mavlink_message_t *msg);
 	void handle_message_serial_control(mavlink_message_t *msg);
 	void handle_message_logging_ack(mavlink_message_t *msg);
+	void handle_message_avoidance_triplet(mavlink_message_t *msg);
 
 	void *receive_thread(void *arg);
 
@@ -222,6 +224,7 @@ private:
 	orb_advert_t _follow_target_pub;
 	orb_advert_t _transponder_report_pub;
 	orb_advert_t _control_state_pub;
+	orb_advert_t _avoidance_triplet_pub;
 	static const int _gps_inject_data_queue_size = 6;
 	orb_advert_t _gps_inject_data_pub;
 	int _control_mode_sub;
