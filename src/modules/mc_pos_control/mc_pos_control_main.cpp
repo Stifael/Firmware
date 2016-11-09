@@ -1325,7 +1325,7 @@ MulticopterPositionControl::task_main()
 			reset_yaw_sp = true;
 		}
 
-		PX4_INFO("timestamp avoidance: %.6f", (double)_avoidance_triplet_sp.timestamp);
+		//PX4_INFO("timestamp avoidance: %.6f", (double)_avoidance_triplet_sp.timestamp);
 
 		/* reset yaw and altitude setpoint for VTOL which are in fw mode */
 		if (_vehicle_status.is_vtol) {

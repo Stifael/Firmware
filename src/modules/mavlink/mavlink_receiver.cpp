@@ -157,6 +157,7 @@ MavlinkReceiver::~MavlinkReceiver()
 void
 MavlinkReceiver::handle_message(mavlink_message_t *msg)
 {
+
 	if (!_mavlink->get_config_link_on()) {
 		if (_mavlink->get_mode() == Mavlink::MAVLINK_MODE_CONFIG) {
 			_mavlink->set_config_link_on(true);
@@ -165,6 +166,7 @@ MavlinkReceiver::handle_message(mavlink_message_t *msg)
 
 	switch (msg->msgid) {
 	case MAVLINK_MSG_ID_COMMAND_LONG:
+
 		if (_mavlink->accepting_commands()) {
 			handle_message_command_long(msg);
 		}
@@ -353,6 +355,8 @@ MavlinkReceiver::evaluate_target_ok(int command, int target_system, int target_c
 void
 MavlinkReceiver::handle_message_command_long(mavlink_message_t *msg)
 {
+
+
 	/* command */
 	mavlink_command_long_t cmd_mavlink;
 	mavlink_msg_command_long_decode(msg, &cmd_mavlink);
@@ -780,6 +784,7 @@ MavlinkReceiver::handle_message_set_position_target_local_ned(mavlink_message_t 
 		PX4_ISFINITE(set_position_target_local_ned.afy) &&
 		PX4_ISFINITE(set_position_target_local_ned.afz) &&
 		PX4_ISFINITE(set_position_target_local_ned.yaw);
+
 
 	/* Only accept messages which are intended for this system */
 	if ((mavlink_system.sysid == set_position_target_local_ned.target_system ||
