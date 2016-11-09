@@ -148,7 +148,7 @@ private:
 
 	struct vehicle_status_s 			_vehicle_status; 	/**< vehicle status */
 	struct vehicle_land_detected_s 			_vehicle_land_detected;	/**< vehicle land detected */
-	struct control_state_s				_ctrl_state;		/**< vehicle attitude */
+	struct control_state_s				_ctrl_state;		/**< currently useded for: vehicle attitude, acceleration  */
 	struct vehicle_attitude_setpoint_s		_att_sp;		/**< vehicle attitude setpoint */
 	struct manual_control_setpoint_s		_manual;		/**< r/c channel data */
 	struct vehicle_control_mode_s			_control_mode;		/**< vehicle control mode */
@@ -258,6 +258,7 @@ private:
 	math::Vector<3> _vel_ff;
 	math::Vector<3> _vel_sp_prev;
 	math::Vector<3> _vel_err_d;		/**< derivative of current velocity */
+	math::Vector<3> _acc; /**< current acceleration */
 
 	math::Matrix<3, 3> _R;			/**< rotation matrix from attitude quaternions */
 	float _yaw;				/**< yaw angle (euler) */
@@ -431,6 +432,7 @@ MulticopterPositionControl::MulticopterPositionControl() :
 	_vel_ff.zero();
 	_vel_sp_prev.zero();
 	_vel_err_d.zero();
+	_acc.zero();
 
 	_R.identity();
 
@@ -660,6 +662,12 @@ MulticopterPositionControl::poll_subscriptions()
 		math::Vector<3> euler_angles;
 		euler_angles = _R.to_euler();
 		_yaw = euler_angles(2);
+
+		/* acceleration */
+		_acc(0) = _ctrl_state.x_acc;
+		_acc(1) = _ctrl_state.y_acc;
+		_acc(2) = _ctrl_state.z_acc;
+
 	}
 
 	orb_check(_att_sp_sub, &updated);
@@ -1382,6 +1390,8 @@ MulticopterPositionControl::task_main()
 		    _control_mode.flag_control_acceleration_enabled) {
 
 			_vel_ff.zero();
+
+
 
 			/* by default, run position/altitude controller. the control_* functions
 			 * can disable this and run velocity controllers directly in this cycle */
