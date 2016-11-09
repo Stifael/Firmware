@@ -178,6 +178,8 @@ private:
 		param_t z_vel_max_up;
 		param_t z_vel_max_down;
 		param_t z_ff;
+		param_t z_acc_p;
+		param_t z_acc_d;
 		param_t xy_p;
 		param_t xy_vel_p;
 		param_t xy_vel_i;
@@ -185,6 +187,8 @@ private:
 		param_t xy_vel_max;
 		param_t xy_vel_cruise;
 		param_t xy_ff;
+		param_t xy_acc_p;
+		param_t xy_acc_d;
 		param_t tilt_max_air;
 		param_t land_speed;
 		param_t tko_speed;
@@ -236,6 +240,8 @@ private:
 		math::Vector<3> vel_max;
 		math::Vector<3> vel_cruise;
 		math::Vector<3> sp_offs_max;
+		math::Vector<3> acc_p;
+		math::Vector<3> acc_d;
 	}		_params;
 
 	struct map_projection_reference_s _ref_pos;
@@ -423,6 +429,8 @@ MulticopterPositionControl::MulticopterPositionControl() :
 	_params.vel_cruise.zero();
 	_params.vel_ff.zero();
 	_params.sp_offs_max.zero();
+	_params.acc_p.zero();
+	_params.acc_d.zero();
 
 	_pos.zero();
 	_pos_sp.zero();
@@ -463,6 +471,8 @@ MulticopterPositionControl::MulticopterPositionControl() :
 	_params_handles.xy_vel_max	= param_find("MPC_XY_VEL_MAX");
 	_params_handles.xy_vel_cruise	= param_find("MPC_XY_CRUISE");
 	_params_handles.xy_ff		= param_find("MPC_XY_FF");
+	_params_handles.xy_acc_p = param_find("MPC_XY_ACC_P");
+	_params_handles.xy_acc_d= param_find("MPC_XY_ACC_D");
 	_params_handles.tilt_max_air	= param_find("MPC_TILTMAX_AIR");
 	_params_handles.land_speed	= param_find("MPC_LAND_SPEED");
 	_params_handles.tko_speed	= param_find("MPC_TKO_SPEED");
@@ -548,6 +558,16 @@ MulticopterPositionControl::parameters_update(bool force)
 		_params.vel_p(1) = v;
 		param_get(_params_handles.z_vel_p, &v);
 		_params.vel_p(2) = v;
+		param_get(_params_handles.xy_acc_p, &v);
+		_params.acc_p(0) = v;
+		_params.acc_p(1) = v;
+		param_get(_params_handles.z_acc_p, &v);
+		_params.acc_p(2) = v;
+		param_get(_params_handles.xy_acc_d, &v);
+		_params.acc_d(0) = v;
+		_params.acc_d(1) = v;
+		param_get(_params_handles.z_acc_d, &v);
+		_params.acc_d(2) = v;
 		param_get(_params_handles.xy_vel_i, &v);
 		_params.vel_i(0) = v;
 		_params.vel_i(1) = v;
@@ -558,6 +578,8 @@ MulticopterPositionControl::parameters_update(bool force)
 		_params.vel_d(1) = v;
 		param_get(_params_handles.z_vel_d, &v);
 		_params.vel_d(2) = v;
+		param_get(_params_handles.z_acc_d, &v);
+		_params.acc_d(2) = v;
 		param_get(_params_handles.xy_vel_max, &v);
 		_params.vel_max(0) = v;
 		_params.vel_max(1) = v;
@@ -588,6 +610,8 @@ MulticopterPositionControl::parameters_update(bool force)
 		_params.hold_max_z = (v < 0.0f ? 0.0f : v);
 		param_get(_params_handles.acc_hor_max, &v);
 		_params.acc_hor_max = v;
+
+
 		/*
 		 * increase the maximum horizontal acceleration such that stopping
 		 * within 1 s from full speed is feasible
