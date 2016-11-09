@@ -8609,7 +8609,7 @@ static void mavlink_test_avoidance_triplet(uint8_t system_id, uint8_t component_
         uint8_t buffer[MAVLINK_MAX_PACKET_LEN];
         uint16_t i;
     mavlink_avoidance_triplet_t packet_in = {
-        93372036854775807ULL,963497880,101.0,129.0,157.0,185.0,213.0,241.0,269.0,297.0,325.0,353.0,381.0,409.0
+        93372036854775807ULL,963497880,101.0,129.0,157.0,185.0,213.0,241.0,269.0,297.0,325.0,353.0,381.0,409.0,185,252
     };
     mavlink_avoidance_triplet_t packet1, packet2;
         memset(&packet1, 0, sizeof(packet1));
@@ -8627,6 +8627,8 @@ static void mavlink_test_avoidance_triplet(uint8_t system_id, uint8_t component_
         packet1.duration = packet_in.duration;
         packet1.max_acc = packet_in.max_acc;
         packet1.acc_per_err = packet_in.acc_per_err;
+        packet1.target_system = packet_in.target_system;
+        packet1.target_component = packet_in.target_component;
         
         
 #ifdef MAVLINK_STATUS_FLAG_OUT_MAVLINK1
@@ -8641,12 +8643,12 @@ static void mavlink_test_avoidance_triplet(uint8_t system_id, uint8_t component_
         MAVLINK_ASSERT(memcmp(&packet1, &packet2, sizeof(packet1)) == 0);
 
         memset(&packet2, 0, sizeof(packet2));
-    mavlink_msg_avoidance_triplet_pack(system_id, component_id, &msg , packet1.time_usec , packet1.gen_count , packet1.prev_x , packet1.prev_y , packet1.prev_z , packet1.ctrl_x , packet1.ctrl_y , packet1.ctrl_z , packet1.next_x , packet1.next_y , packet1.next_z , packet1.duration , packet1.max_acc , packet1.acc_per_err );
+    mavlink_msg_avoidance_triplet_pack(system_id, component_id, &msg , packet1.time_usec , packet1.gen_count , packet1.target_system , packet1.target_component , packet1.prev_x , packet1.prev_y , packet1.prev_z , packet1.ctrl_x , packet1.ctrl_y , packet1.ctrl_z , packet1.next_x , packet1.next_y , packet1.next_z , packet1.duration , packet1.max_acc , packet1.acc_per_err );
     mavlink_msg_avoidance_triplet_decode(&msg, &packet2);
         MAVLINK_ASSERT(memcmp(&packet1, &packet2, sizeof(packet1)) == 0);
 
         memset(&packet2, 0, sizeof(packet2));
-    mavlink_msg_avoidance_triplet_pack_chan(system_id, component_id, MAVLINK_COMM_0, &msg , packet1.time_usec , packet1.gen_count , packet1.prev_x , packet1.prev_y , packet1.prev_z , packet1.ctrl_x , packet1.ctrl_y , packet1.ctrl_z , packet1.next_x , packet1.next_y , packet1.next_z , packet1.duration , packet1.max_acc , packet1.acc_per_err );
+    mavlink_msg_avoidance_triplet_pack_chan(system_id, component_id, MAVLINK_COMM_0, &msg , packet1.time_usec , packet1.gen_count , packet1.target_system , packet1.target_component , packet1.prev_x , packet1.prev_y , packet1.prev_z , packet1.ctrl_x , packet1.ctrl_y , packet1.ctrl_z , packet1.next_x , packet1.next_y , packet1.next_z , packet1.duration , packet1.max_acc , packet1.acc_per_err );
     mavlink_msg_avoidance_triplet_decode(&msg, &packet2);
         MAVLINK_ASSERT(memcmp(&packet1, &packet2, sizeof(packet1)) == 0);
 
@@ -8659,7 +8661,7 @@ static void mavlink_test_avoidance_triplet(uint8_t system_id, uint8_t component_
         MAVLINK_ASSERT(memcmp(&packet1, &packet2, sizeof(packet1)) == 0);
         
         memset(&packet2, 0, sizeof(packet2));
-    mavlink_msg_avoidance_triplet_send(MAVLINK_COMM_1 , packet1.time_usec , packet1.gen_count , packet1.prev_x , packet1.prev_y , packet1.prev_z , packet1.ctrl_x , packet1.ctrl_y , packet1.ctrl_z , packet1.next_x , packet1.next_y , packet1.next_z , packet1.duration , packet1.max_acc , packet1.acc_per_err );
+    mavlink_msg_avoidance_triplet_send(MAVLINK_COMM_1 , packet1.time_usec , packet1.gen_count , packet1.target_system , packet1.target_component , packet1.prev_x , packet1.prev_y , packet1.prev_z , packet1.ctrl_x , packet1.ctrl_y , packet1.ctrl_z , packet1.next_x , packet1.next_y , packet1.next_z , packet1.duration , packet1.max_acc , packet1.acc_per_err );
     mavlink_msg_avoidance_triplet_decode(last_msg, &packet2);
         MAVLINK_ASSERT(memcmp(&packet1, &packet2, sizeof(packet1)) == 0);
 }
