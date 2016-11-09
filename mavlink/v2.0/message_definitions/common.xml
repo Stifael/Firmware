@@ -3800,7 +3800,7 @@
                <field type="uint16_t" name="sequence">sequence number (must match the one in LOGGING_DATA_ACKED)</field>
           </message>
 
-   <message id="269" name="AVOIDANCE_TRIPLET">
+   <message id="235" name="AVOIDANCE_TRIPLET">
             <description>Description of path to follow</description>
             <field type="uint64_t" name="time_usec">Timestamp (micros since boot or Unix epoch)</field>
             <field type="uint32_t" name="gen_count">Generation count for triplet. Increases monotonically and wraps once reached. This number is a copy of the last received planning triplet, which allows the system to update a planning triplet with avoidance data.</field>

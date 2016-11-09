@@ -1,7 +1,7 @@
 #pragma once
 // MESSAGE AVOIDANCE_TRIPLET PACKING
 
-#define MAVLINK_MSG_ID_AVOIDANCE_TRIPLET 269
+#define MAVLINK_MSG_ID_AVOIDANCE_TRIPLET 235
 
 MAVPACKED(
 typedef struct __mavlink_avoidance_triplet_t {
@@ -23,17 +23,17 @@ typedef struct __mavlink_avoidance_triplet_t {
 
 #define MAVLINK_MSG_ID_AVOIDANCE_TRIPLET_LEN 60
 #define MAVLINK_MSG_ID_AVOIDANCE_TRIPLET_MIN_LEN 60
-#define MAVLINK_MSG_ID_269_LEN 60
-#define MAVLINK_MSG_ID_269_MIN_LEN 60
+#define MAVLINK_MSG_ID_235_LEN 60
+#define MAVLINK_MSG_ID_235_MIN_LEN 60
 
 #define MAVLINK_MSG_ID_AVOIDANCE_TRIPLET_CRC 102
-#define MAVLINK_MSG_ID_269_CRC 102
+#define MAVLINK_MSG_ID_235_CRC 102
 
 
 
 #if MAVLINK_COMMAND_24BIT
 #define MAVLINK_MESSAGE_INFO_AVOIDANCE_TRIPLET { \
-    269, \
+    235, \
     "AVOIDANCE_TRIPLET", \
     14, \
     {  { "time_usec", NULL, MAVLINK_TYPE_UINT64_T, 0, 0, offsetof(mavlink_avoidance_triplet_t, time_usec) }, \
