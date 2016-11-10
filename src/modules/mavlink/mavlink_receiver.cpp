@@ -611,6 +611,7 @@ MavlinkReceiver::handle_message_avoidance_triplet(mavlink_message_t *msg)
     f.max_acc = avoidance_triplet.max_acc;
     f.acc_per_error = avoidance_triplet.acc_per_err;
 
+
     if(_avoidance_triplet_pub == nullptr){
     	_avoidance_triplet_pub = orb_advertise(ORB_ID(avoidance_triplet), &f);
     }else {
