@@ -153,44 +153,75 @@ PARAM_DEFINE_FLOAT(MPC_MANTHR_MAX, 0.9f);
  * Proportional gain for vertical position error
  *
  * @min 0.0
- * @max 1.5
+ * @max 2.0
  * @decimal 2
  * @group Multicopter Position Control
  */
-PARAM_DEFINE_FLOAT(MPC_Z_P, 1.0f);
+PARAM_DEFINE_FLOAT(MPC_Z_P, 1.0);
 
 /**
  * Proportional gain for vertical velocity error
  *
  * @min 0.1
- * @max 0.4
+ * @max 4.0
  * @decimal 2
  * @group Multicopter Position Control
  */
-PARAM_DEFINE_FLOAT(MPC_Z_VEL_P, 0.2f);
+PARAM_DEFINE_FLOAT(MPC_Z_VEL_P, 1.8f);
 
 /**
  * Integral gain for vertical velocity error
  *
  * Non zero value allows hovering thrust estimation on stabilized or autonomous takeoff.
  *
- * @min 0.01
- * @max 0.1
+ * @min 0.0
+ * @max 3.0
  * @decimal 3
  * @group Multicopter Position Control
  */
-PARAM_DEFINE_FLOAT(MPC_Z_VEL_I, 0.02f);
+PARAM_DEFINE_FLOAT(MPC_Z_VEL_I, 0.0f);
 
 /**
  * Differential gain for vertical velocity error
  *
  * @min 0.0
- * @max 0.1
+ * @max 0.0
  * @decimal 3
  * @group Multicopter Position Control
  */
 PARAM_DEFINE_FLOAT(MPC_Z_VEL_D, 0.0f);
 
+/**
+ * Proportional gain for vertical velocity error in combo with acceleration feedback
+ *
+ * @min 0.1
+ * @max 4.0
+ * @decimal 2
+ * @group Multicopter Position Control
+ */
+PARAM_DEFINE_FLOAT(MPC_Z_VEL_P_2, 2.8f);
+
+/**
+ * Integral gain for vertical velocity error in combo with acceleration feedback
+ *
+ * Non zero value allows hovering thrust estimation on stabilized or autonomous takeoff.
+ *
+ * @min 0.0
+ * @max 3.0
+ * @decimal 3
+ * @group Multicopter Position Control
+ */
+PARAM_DEFINE_FLOAT(MPC_Z_VEL_I_2, 0.0f);
+
+/**
+ * Differential gain for vertical velocity error in combo with acceleration feedback
+ *
+ * @min 0.0
+ * @max 1.0
+ * @decimal 3
+ * @group Multicopter Position Control
+ */
+PARAM_DEFINE_FLOAT(MPC_Z_VEL_D_2, 0.0002f);
 /**
  * Maximum vertical ascent velocity
  *
@@ -252,11 +283,11 @@ PARAM_DEFINE_FLOAT(MPC_XY_P, 0.95f);
  * Proportional gain for horizontal velocity error
  *
  * @min 0.06
- * @max 0.15
+ * @max 3.0
  * @decimal 2
  * @group Multicopter Position Control
  */
-PARAM_DEFINE_FLOAT(MPC_XY_VEL_P, 0.09f);
+PARAM_DEFINE_FLOAT(MPC_XY_VEL_P, 1.6f);
 
 /**
  * Integral gain for horizontal velocity error
@@ -264,21 +295,53 @@ PARAM_DEFINE_FLOAT(MPC_XY_VEL_P, 0.09f);
  * Non-zero value allows to resist wind.
  *
  * @min 0.0
- * @max 0.1
+ * @max 0.0
  * @decimal 3
  * @group Multicopter Position Control
  */
-PARAM_DEFINE_FLOAT(MPC_XY_VEL_I, 0.02f);
+PARAM_DEFINE_FLOAT(MPC_XY_VEL_I, 0.0f);
 
 /**
  * Differential gain for horizontal velocity error. Small values help reduce fast oscillations. If value is too big oscillations will appear again.
  *
- * @min 0.005
+ * @min 0.0
  * @max 0.1
  * @decimal 3
  * @group Multicopter Position Control
  */
-PARAM_DEFINE_FLOAT(MPC_XY_VEL_D, 0.01f);
+PARAM_DEFINE_FLOAT(MPC_XY_VEL_D, 0.0f);
+
+
+/**
+ * Proportional gain for horizontal velocity error in combo with acceleation feedback
+ *
+ * @min 0.0
+ * @max 3.0
+ * @decimal 2
+ * @group Multicopter Position Control
+ */
+PARAM_DEFINE_FLOAT(MPC_XY_VEL_P_2, 2.0f);
+
+/**
+ * Integral gain for horizontal velocity error in combo with acceleration feedback
+ *
+ * Non-zero value allows to resist wind.
+ *
+ * @min 0.0
+ * @max 0.0
+ * @decimal 3
+ * @group Multicopter Position Control
+ */
+PARAM_DEFINE_FLOAT(MPC_XY_VEL_I_2, 0.0f);
+/**
+ * Differential gain for horizontal velocity error used with acceleration feedback. Small values help reduce fast oscillations. If value is too big oscillations will appear again.
+ *
+ * @min 0.0
+ * @max 0.1
+ * @decimal 3
+ * @group Multicopter Position Control
+ */
+PARAM_DEFINE_FLOAT(MPC_XY_VEL_D_2, 0.0002f);
 
 /**
  * Nominal horizontal velocity
@@ -433,7 +496,7 @@ PARAM_DEFINE_FLOAT(MPC_HOLD_MAX_XY, 0.8f);
  * @decimal 2
  * @group Multicopter Position Control
  */
-PARAM_DEFINE_FLOAT(MPC_HOLD_MAX_Z, 0.6f);
+PARAM_DEFINE_FLOAT(MPC_HOLD_MAX_Z, 0.7f);
 
 /**
  * Low pass filter cut freq. for numerical velocity derivative
@@ -457,7 +520,46 @@ PARAM_DEFINE_FLOAT(MPC_VELD_LP, 5.0f);
  * @group Multicopter Position Control
  */
 PARAM_DEFINE_FLOAT(MPC_ACC_HOR_MAX, 5.0f);
-
+/**
+ * Proportioanl gain for horizontal acceleration error
+ *
+ *
+ * @min 0.0
+ * @max 1.0
+ * @decimal
+ * @group Multicopter Position Control
+ */
+PARAM_DEFINE_FLOAT(MPC_XY_ACC_P, 0.002f);
+/**
+ * Proportional gain for vertical acceleration error
+ *
+ *
+ * @min 0.0
+ * @max 5.0
+ * @decimal
+ * @group Multicopter Position Control
+ */
+PARAM_DEFINE_FLOAT(MPC_Z_ACC_P, 0.0025f);
+/**
+ * Derivative gain for horizontal acceleration error
+ *
+ *
+ * @min 0.0
+ * @max 1.0
+ * @decimal
+ * @group Multicopter Position Control
+ */
+PARAM_DEFINE_FLOAT(MPC_XY_ACC_D, 0.001f);
+/**
+ * Derivative gain for vertical acceleration error
+ *
+ *
+ * @min 0.0
+ * @max 1.0
+ * @decimal
+ * @group Multicopter Position Control
+ */
+PARAM_DEFINE_FLOAT(MPC_Z_ACC_D, 0.001f);
 /**
  * Altitude control mode, note mode 1 only tested with LPE
  *
@@ -466,5 +568,6 @@ PARAM_DEFINE_FLOAT(MPC_ACC_HOR_MAX, 5.0f);
  * @value 0 Altitude following
  * @value 1 Terrain following
  * @group Multicopter Position Control
+ *
  */
 PARAM_DEFINE_INT32(MPC_ALT_MODE, 0);
