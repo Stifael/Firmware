@@ -668,6 +668,8 @@ MulticopterAttitudeControl::control_attitude(float dt)
 
 	_thrust_sp = _v_att_sp.thrust;
 
+	PX4_INFO("thrst mag %.6f", (double)_thrust_sp);
+
 	/* construct attitude setpoint rotation matrix */
 	math::Quaternion q_sp(_v_att_sp.q_d[0], _v_att_sp.q_d[1], _v_att_sp.q_d[2], _v_att_sp.q_d[3]);
 	math::Matrix<3, 3> R_sp = q_sp.to_dcm();
@@ -862,6 +864,10 @@ MulticopterAttitudeControl::task_main()
 			continue;
 		}
 
+
+
+
+
 		perf_begin(_loop_perf);
 
 		/* run controller on attitude changes */
@@ -970,6 +976,8 @@ MulticopterAttitudeControl::task_main()
 
 			if (_v_control_mode.flag_control_rates_enabled) {
 				control_attitude_rates(dt);
+
+				PX4_INFO("rates enabled");
 
 				/* publish actuator controls */
 				_actuators.control[0] = (PX4_ISFINITE(_att_control(0))) ? _att_control(0) : 0.0f;

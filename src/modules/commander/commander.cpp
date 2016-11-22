@@ -3666,12 +3666,14 @@ set_control_mode()
 			!offboard_control_mode.ignore_attitude ||
 			!offboard_control_mode.ignore_position ||
 			!offboard_control_mode.ignore_velocity ||
-			!offboard_control_mode.ignore_acceleration_force;
+			!offboard_control_mode.ignore_acceleration_force||
+			!offboard_control_mode.ignore_avoidance_triplet;
 
 		control_mode.flag_control_attitude_enabled = !offboard_control_mode.ignore_attitude ||
 			!offboard_control_mode.ignore_position ||
 			!offboard_control_mode.ignore_velocity ||
-			!offboard_control_mode.ignore_acceleration_force;
+			!offboard_control_mode.ignore_acceleration_force||
+			!offboard_control_mode.ignore_avoidance_triplet;
 
 		control_mode.flag_control_rattitude_enabled = false;
 
@@ -3690,6 +3692,8 @@ set_control_mode()
 
 		control_mode.flag_control_altitude_enabled = (!offboard_control_mode.ignore_velocity ||
 			!offboard_control_mode.ignore_position) && !control_mode.flag_control_acceleration_enabled;
+
+		control_mode.flag_control_avoidance_enabled = (!offboard_control_mode.ignore_avoidance_triplet);
 
 		break;
 

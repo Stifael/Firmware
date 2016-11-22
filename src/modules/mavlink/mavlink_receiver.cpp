@@ -609,6 +609,7 @@ MavlinkReceiver::handle_message_avoidance_triplet(mavlink_message_t *msg)
 
 		struct offboard_control_mode_s offboard_control_mode = {};
 
+
 		/* create to offboard control structure */
 		/* for now: ignore everything accept avoidance triplet*/
 		offboard_control_mode.ignore_position = true;
@@ -617,6 +618,9 @@ MavlinkReceiver::handle_message_avoidance_triplet(mavlink_message_t *msg)
 		offboard_control_mode.ignore_acceleration_force = true;
 		offboard_control_mode.ignore_attitude = true;
 		offboard_control_mode.ignore_bodyrate = true;
+		offboard_control_mode.ignore_attitude = true;
+		offboard_control_mode.ignore_thrust = true;
+		offboard_control_mode.ignore_alt_hold = true;
 
 		/* do avoidance triplet */
 		offboard_control_mode.ignore_avoidance_triplet = false;
@@ -669,6 +673,7 @@ MavlinkReceiver::handle_message_avoidance_triplet(mavlink_message_t *msg)
 
 					f.max_acc = set_avoidance_triplet_ned.max_acc;
 					f.acc_per_error = set_avoidance_triplet_ned.acc_per_err;
+					f.duration = set_avoidance_triplet_ned.duration;
 
 					if (_avoidance_triplet_pub == nullptr) {
 						_avoidance_triplet_pub = orb_advertise(

@@ -626,9 +626,12 @@ MulticopterPositionControl::saturate_asym(math::Vector<3> & vec, const math::Vec
 		vec(1) = vec_xy(1);
 	}
 
+	PX4_INFO("vec_xy : %.6f", (double)vec_xy(2));
+
 	/* Note: saturation based on NED coordinate system and therefore negate */
 	if (vec(2) < mag_max_up && vec(2) < 0.0f ){
 		vec(2) = mag_max_up;
+		PX4_INFO("upwards");
 	}else if (vec(2) > mag_max_down && vec(2) > 0.0f){
 		vec(2) = mag_max_down;
 	}
@@ -1170,9 +1173,10 @@ MulticopterPositionControl::compute_states_closest_on_bezier(const float *prev_p
 	/* update pos_sp,vel_sp, and acc_sp */
 	compute_point_closest_on_bezier(prev_pt, ctrl_pt, next_pt);
 
+	PX4_INFO("duration: %.6f", (double)duration);
 	/* adust acceleration and velocity */
 	_vel_sp /= duration;
-	_acc_sp /= duration;
+	_acc_sp /= (duration * duration);
 
 
 }
@@ -1201,12 +1205,20 @@ MulticopterPositionControl::compute_point_closest_on_bezier( const float *prev, 
 	/* get t that corresponds to point closest on bezier point */
 	float t = golden_section_search(prev, ctrl, next);
 
+	PX4_INFO("t: %.f", (double)t);
+
 	/* compute states correspoding to t: see wikipedia */
 	for (int i = 0; i<3; i++){
 		_pos_sp(i) = (1.0f-t)*(1.0f-t) * prev[i] + 2.0f * (1.0f -t)*t*ctrl[i] + t * t* next[i];
-		_vel_sp(i) = (2.0f * (1.0f-t) * (ctrl[i] - prev[i]) + 2.0f * t * (next[i]) - ctrl[i]);
+		_vel_sp(i) = 2.0f * (1.0f-t) * (ctrl[i] - prev[i]) + 2.0f * t * (next[i] - ctrl[i]);
+		PX4_INFO("vvvv: %.6f", (double)_vel_sp(i));
 		_acc_sp(i) = 2.0f * (next[i] - 2.0f * ctrl[i] + prev[i]);
 	}
+	PX4_INFO("next x: %.6f, next y: %.6f, next p z: %.6f", (double)next[0], (double)next[1], (double)next[2]);
+	PX4_INFO("ct x: %.6f, ct y: %.6f, ct p z: %.6f", (double)ctrl[0], (double)ctrl[1], (double)ctrl[2]);
+	PX4_INFO("bpos x: %.6f, bpos y: %.6f, bpos p z: %.6f", (double)_pos_sp(0), (double)_pos_sp(1), (double)_pos_sp(2));
+	PX4_INFO("bvel x: %.6f, bvel y: %.6f, bvel p z: %.6f", (double)_vel_sp(0), (double)_vel_sp(1), (double)_vel_sp(2));
+	PX4_INFO("bacc x: %.6f, bacc y: %.6f, bacc p z: %.6f", (double)_acc_sp(0), (double)_acc_sp(1), (double)_acc_sp(2));
 
 }
 
@@ -1240,7 +1252,7 @@ MulticopterPositionControl::compute_yaw(float &yaw_des, const math::Vector<3> &v
 
 	/* project vec onto xy plane */
 	math::Vector<3> vec_proj = vec - _z_ax * (_z_ax * vec);
-	vec_poj /= vec_proj.length();
+	vec_proj /= vec_proj.length();
 
 	/* angle betwee vec and x */
 	yaw_des = acosf(_x_ax * vec_proj);
@@ -1248,7 +1260,7 @@ MulticopterPositionControl::compute_yaw(float &yaw_des, const math::Vector<3> &v
 	/* check orientation */
 	math::Vector<3> cross;
 	cross_product(cross, _x_ax, vec_proj );
-	if (cross(2) < 0.0){
+	if (cross(2) < 0.0f){
 		yaw_des *= -1.0f;
 	}
 
@@ -1284,7 +1296,7 @@ MulticopterPositionControl::attitude_from_thrust_sp(const math::Vector<3> &thrus
 	}
 
 	/* vector of desired yaw direction in XY plane, rotated by PI/2 */
-	math::Vector<3> y_C(-sinf(yaw_des), cosf(yaw_des, 0.0f);
+	math::Vector<3> y_C(-sinf(yaw_des), cosf(yaw_des), 0.0f);
 
 	if (fabsf(body_z(2)) > SIGMA) {
 		/* desired body_x axis, orthogonal to body_z */
@@ -1325,12 +1337,9 @@ MulticopterPositionControl::attitude_from_thrust_sp(const math::Vector<3> &thrus
 	_att_sp.pitch_body = euler(1);
 	_att_sp.thrust = thrust_abs;
 
-    /* save thrust setpoint for logging */
-    _local_pos_sp.acc_x = thrust_sp(0) * ONE_G;
-    _local_pos_sp.acc_y = thrust_sp(1) * ONE_G;
-    _local_pos_sp.acc_z = thrust_sp(2) * ONE_G;
+	PX4_INFO("thrust abs: %.6f", (double)thrust_abs);
 
-    _att_sp.timestamp = hrt_absolute_time();
+
 
 
 }
@@ -1692,9 +1701,9 @@ MulticopterPositionControl::task_main()
 		}
 
 		PX4_INFO("avoidance next[0]: %.6f", (double)_avoidance_triplet_sp.next_pt[2]);
-		PX4_INFO("position mode: %d", _control_mode.flag_control_position_enabled);
-		PX4_INFO("offboard mode: %d", _control_mode.flag_control_offboard_enabled);
 		PX4_INFO("avoidance mode: %d", _control_mode.flag_control_avoidance_enabled);
+		PX4_INFO("position mode: %d", _control_mode.flag_control_position_enabled);
+		PX4_INFO("att mode: %d", _control_mode.flag_control_attitude_enabled);
 
 		/* reset yaw and altitude setpoint for VTOL which are in fw mode */
 		if (_vehicle_status.is_vtol) {
@@ -1870,18 +1879,34 @@ MulticopterPositionControl::task_main()
 				vel_across = pos_error.normalized() * ((_vel*pos_error) / (pos_error.length()));
 				vel_parallel = _vel - vel_across;
 
+				PX4_INFO("pos err x: %.6f, pos err y: %.6f, pose err z: %.6f", (double)pos_error(0), (double)pos_error(1), (double)pos_error(2));
+				PX4_INFO("vel_across x: %.6f, vel_across y: %.6f, vel_across z: %.6f", (double)vel_across(0), (double)vel_across(1), (double)vel_across(2));
+				PX4_INFO("vel x: %.6f, vel y: %.6f, vel_\z: %.6f", (double)_vel(0), (double)_vel(1), (double)_vel(2));
+
+				PX4_INFO("vel_parallel x: %.6f, vel_parallel y: %.6f, vel_parallel z: %.6f", (double)vel_parallel(0), (double)vel_parallel(1), (double)vel_parallel(2));
+
+
 
 				/* velocity setpoint across: P controller */
 				math::Vector<3> vel_across_sp = pos_error.emult(_params.pos_p);
 				math::Vector<3> vel_parallel_sp = _vel_sp;
 
+				PX4_INFO("vel aross sp x: %.6f, vel acros sp y: %.6f, vel acrosa p z: %.6f", (double)vel_across_sp(0), (double)vel_across_sp(1), (double)vel_across_sp(2));
+				PX4_INFO("vel paral sp x: %.6f, vel para sp y: %.6f, vel paral sp z: %.6f", (double)vel_parallel_sp(0), (double)vel_parallel_sp(1), (double)vel_parallel_sp(2));
+
+
 				/* saturate velocity set points */
 				saturate_asym(vel_parallel_sp, _params.vel_max, _params.vel_min);
 				saturate_asym(vel_across_sp, _params.vel_max, _params.vel_min);
 
+				PX4_INFO("vel_across sp 2: %.6f", (double)vel_across_sp(2));
+				PX4_INFO("vel_parallel sp 2: %.6f", (double)vel_parallel_sp(2));
+
 				/* limit acceleration */
 				math::Vector<3> acc_predicted_parallel = (vel_parallel_sp - vel_parallel)/dt;
 				math::Vector<3> acc_predicted_across = (vel_across_sp - vel_across)/dt;
+
+
 
 				/* ToDo: add acceleratin maximimum */
 				/*math::Vector<3> acc_max;
@@ -1894,12 +1919,15 @@ MulticopterPositionControl::task_main()
 				saturate(acc_predicted_across, acc_max, acc_min);*/
 
 				/* velocity errors */
-				math::Vector<3> vel_error_across = vel_across_sp - _vel;
-				math::Vector<3> vel_error_parallel = vel_parallel_sp - _vel;
+				math::Vector<3> vel_error_across = vel_across_sp - vel_across;
+				math::Vector<3> vel_error_parallel = vel_parallel_sp - vel_parallel;
 
 				/* thrust setpoints */
 				math::Vector<3> thrust_sp_across = vel_error_across.emult(_params.vel_p) + vel_across_int;
 				math::Vector<3> thrust_sp_parallel = vel_error_parallel.emult(_params.vel_p)  + vel_parallel_int;
+
+				PX4_INFO("thrust sp across z: %.6f", (double)thrust_sp_across(2));
+				PX4_INFO("thrust sp parallel z: %.6f", (double)thrust_sp_parallel(2));
 
 				/* updates integrals */
 				vel_across_int += vel_error_across.emult(_params.vel_i) * dt;
@@ -1910,17 +1938,61 @@ MulticopterPositionControl::task_main()
 
 				/* saturate thrust vector */
 				float mag = thrust_sp.length();
+				PX4_INFO("thrust mag: %.6f", (double)mag);
 				if (mag > _params.thr_max){thrust_sp *= _params.thr_max / mag;}
 				if (mag < _params.thr_min){thrust_sp *= _params.thr_min / mag;}
 
+				PX4_INFO("thrust sp z: %.6f", (double)thrust_sp(2));
+
 
 				/* compute desired yaw such that vehicle always points along path */
-				float yaw_des;
-				compute_yaw(yaw_des, vel_parallel_sp);
+				/* ToDo: check why NAN */
+				float yaw_des = _yaw;
+				//float angle = acosf(_z_ax*vel_parallel/vel_parallel.length());
+				//if(vel_parallel.length() > 0.0f &&  angle > SIGMA ){
+				//	compute_yaw(yaw_des, vel_parallel_sp);
+				//}
+                //
+				PX4_INFO("yaw des: %.6f", (double)yaw_des);
+
+
+				/* publish vel sp*/
+
+                _vel_sp = vel_across_sp + vel_parallel_sp;
+			    _global_vel_sp.vx = _vel_sp(0);
+			    _global_vel_sp.vy = _vel_sp(1);
+			    _global_vel_sp.vz = _vel_sp(2);
+
+			    /* publish velocity setpoint */
+			    /*if (_global_vel_sp_pub != nullptr) {
+			    	orb_publish(ORB_ID(vehicle_global_velocity_setpoint), _global_vel_sp_pub, &_global_vel_sp);
+
+			    } else {
+			    	_global_vel_sp_pub = orb_advertise(ORB_ID(vehicle_global_velocity_setpoint), &_global_vel_sp);
+			    }*/
+
 
 				/* compute attitude */
 				R.identity();
 				attitude_from_thrust_sp(thrust_sp, yaw_des, R);
+
+			    /* save thrust setpoint for logging */
+			    /*_local_pos_sp.acc_x = thrust_sp(0) * ONE_G;
+			    _local_pos_sp.acc_y = thrust_sp(1) * ONE_G;
+			    _local_pos_sp.acc_z = thrust_sp(2) * ONE_G;*/
+
+			    _att_sp.timestamp = hrt_absolute_time();
+
+
+				/* send attitude */
+				if (_att_sp_pub != nullptr) {
+					orb_publish(_attitude_setpoint_id, _att_sp_pub, &_att_sp);
+
+				} else if (_attitude_setpoint_id) {
+					_att_sp_pub = orb_advertise(_attitude_setpoint_id, &_att_sp);
+				}
+
+
 
 
 			} else {
@@ -2493,6 +2565,8 @@ MulticopterPositionControl::task_main()
 		/* generate attitude setpoint from manual controls */
 		if (_control_mode.flag_control_manual_enabled && _control_mode.flag_control_attitude_enabled) {
 
+			PX4_INFO("attitude enfabled enabled");
+
 			/* reset yaw setpoint to current position if needed */
 			if (reset_yaw_sp) {
 				reset_yaw_sp = false;
@@ -2607,7 +2681,7 @@ MulticopterPositionControl::task_main()
 		      !(_control_mode.flag_control_position_enabled ||
 			_control_mode.flag_control_velocity_enabled ||
 			_control_mode.flag_control_acceleration_enabled))) {
-
+			PX4_INFO("should not be in here");
 			if (_att_sp_pub != nullptr) {
 				orb_publish(_attitude_setpoint_id, _att_sp_pub, &_att_sp);
 
