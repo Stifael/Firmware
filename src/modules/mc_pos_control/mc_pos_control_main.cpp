@@ -287,6 +287,10 @@ private:
 	math::Vector<3> _acc_err_d;
 	math::Vector<3> _thrust_prev;
 
+	math::Vector<3> _x_ax;
+	math::Vector<3> _z_ax;
+
+
 	math::Matrix<3, 3> _R;			/**< rotation matrix from attitude quaternions */
 	float _yaw;				/**< yaw angle (euler) */
 	bool _in_landing;	/**< the vehicle is in the landing descent */
@@ -391,7 +395,17 @@ private:
 	/*
 	 * Attitude from thrust setpoint
 	 */
-	void 		attitude_from_thrust_sp(void);
+	void 		attitude_from_thrust_sp(const math::Vector<3> &thrust_sp, const float &yaw_des, matrix::Dcmf &R);
+
+	/*
+	 * Compute yaw of vector consider only xy plane
+	 */
+	void 		compute_yaw(float &yaw_des, const math::Vector<3> &vec);
+
+	/*
+	 * cross product: does not belong here
+	 */
+	void 		cross_product(math::Vector<3> &cross, const math::Vector<3> &vec1, const math::Vector<3> &vec2);
 
 	/**
 	 * Shim for calling task_main from task_create.
@@ -502,6 +516,12 @@ MulticopterPositionControl::MulticopterPositionControl() :
 	_thrust_prev.zero();
 	_acc_sp.zero();
 
+	_x_ax(0) = 1.0f;
+	_x_ax(1) = 0.0f;
+	_x_ax(2) = 0.0f;
+	_z_ax(0) = 0.0f;
+	_z_ax(1) = 0.0f;
+	_z_ax(2) = 0.1f;
 
 	_R.identity();
 
@@ -1215,9 +1235,36 @@ MulticopterPositionControl::golden_section_search(const float *prev, const float
 	return (b+a)/2.0f;
 }
 
+void
+MulticopterPositionControl::compute_yaw(float &yaw_des, const math::Vector<3> &vec){
+
+	/* project vec onto xy plane */
+	math::Vector<3> vec_proj = vec - _z_ax * (_z_ax * vec);
+	vec_poj /= vec_proj.length();
+
+	/* angle betwee vec and x */
+	yaw_des = acosf(_x_ax * vec_proj);
+
+	/* check orientation */
+	math::Vector<3> cross;
+	cross_product(cross, _x_ax, vec_proj );
+	if (cross(2) < 0.0){
+		yaw_des *= -1.0f;
+	}
+
+
+}
+void
+MulticopterPositionControl::cross_product(math::Vector<3> &cross, const math::Vector<3> &vec1, const math::Vector<3> &vec2){
+
+	cross(0) = vec1(1)*vec2(2) - vec1(2)* vec2(1);
+	cross(1) = vec1(2)*vec2(0) - vec1(0)* vec2(2);
+	cross(2) = vec1(0)*vec2(1) - vec1(1)* vec2(0);
+}
+
 
 void
-MulticopterPositionControl::attitude_from_thrust_sp(math::Vector<3> &attitude, const math::Vector<3> &thrust_sp, const float &yaw_des){
+MulticopterPositionControl::attitude_from_thrust_sp(const math::Vector<3> &thrust_sp, const float &yaw_des, matrix::Dcmf &R){
 
 	/* desired body_z axis = -normalize(thrust_vector) */
 	math::Vector<3> body_x;
@@ -1276,7 +1323,14 @@ MulticopterPositionControl::attitude_from_thrust_sp(math::Vector<3> &attitude, c
 	matrix::Eulerf euler = R;
 	_att_sp.roll_body = euler(0);
 	_att_sp.pitch_body = euler(1);
-	/* yaw already used to construct rot matrix, but actual rotation matrix can have different yaw near singularity */
+	_att_sp.thrust = thrust_abs;
+
+    /* save thrust setpoint for logging */
+    _local_pos_sp.acc_x = thrust_sp(0) * ONE_G;
+    _local_pos_sp.acc_y = thrust_sp(1) * ONE_G;
+    _local_pos_sp.acc_z = thrust_sp(2) * ONE_G;
+
+    _att_sp.timestamp = hrt_absolute_time();
 
 
 }
@@ -1817,8 +1871,6 @@ MulticopterPositionControl::task_main()
 				vel_parallel = _vel - vel_across;
 
 
-
-
 				/* velocity setpoint across: P controller */
 				math::Vector<3> vel_across_sp = pos_error.emult(_params.pos_p);
 				math::Vector<3> vel_parallel_sp = _vel_sp;
@@ -1861,15 +1913,14 @@ MulticopterPositionControl::task_main()
 				if (mag > _params.thr_max){thrust_sp *= _params.thr_max / mag;}
 				if (mag < _params.thr_min){thrust_sp *= _params.thr_min / mag;}
 
+
+				/* compute desired yaw such that vehicle always points along path */
+				float yaw_des;
+				compute_yaw(yaw_des, vel_parallel_sp);
+
 				/* compute attitude */
 				R.identity();
-				_att_sp.roll_body = 0.0f;
-
-
-
-
-
-
+				attitude_from_thrust_sp(thrust_sp, yaw_des, R);
 
 
 			} else {
