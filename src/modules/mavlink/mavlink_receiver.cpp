@@ -586,37 +586,105 @@ MavlinkReceiver::handle_message_optical_flow_rad(mavlink_message_t *msg)
 void
 MavlinkReceiver::handle_message_avoidance_triplet(mavlink_message_t *msg)
 {
-    mavlink_avoidance_triplet_t avoidance_triplet;
-    mavlink_msg_avoidance_triplet_decode(msg, &avoidance_triplet);
-
-    struct avoidance_triplet_s f;
-    memset(&f, 0, sizeof(f));
-
-    f.timestamp = hrt_absolute_time();
-    f.time_us = avoidance_triplet.time_usec;
-    f.gen_count = avoidance_triplet.gen_count;
-
-    f.prev_pt[0] = avoidance_triplet.prev_x;
-    f.prev_pt[1] = avoidance_triplet.prev_y;
-    f.prev_pt[2] = avoidance_triplet.prev_z;
-
-    f.ctrl_pt[0] = avoidance_triplet.ctrl_x;
-    f.ctrl_pt[1] = avoidance_triplet.ctrl_y;
-    f.ctrl_pt[2] = avoidance_triplet.ctrl_z;
-
-    f.next_pt[0] = avoidance_triplet.next_x;
-    f.next_pt[1] = avoidance_triplet.next_y;
-    f.next_pt[2] = avoidance_triplet.next_z;
-
-    f.max_acc = avoidance_triplet.max_acc;
-    f.acc_per_error = avoidance_triplet.acc_per_err;
+	mavlink_avoidance_triplet_t set_avoidance_triplet_ned;
+	mavlink_msg_avoidance_triplet_decode(msg, &set_avoidance_triplet_ned);
 
 
-    if(_avoidance_triplet_pub == nullptr){
-    	_avoidance_triplet_pub = orb_advertise(ORB_ID(avoidance_triplet), &f);
-    }else {
-    	orb_publish(ORB_ID(avoidance_triplet), _avoidance_triplet_pub, &f);
-    }
+	bool values_finite =
+	PX4_ISFINITE(set_avoidance_triplet_ned.prev_x)&&
+	PX4_ISFINITE(set_avoidance_triplet_ned.prev_y) &&
+	PX4_ISFINITE(set_avoidance_triplet_ned.prev_z) &&
+	PX4_ISFINITE(set_avoidance_triplet_ned.ctrl_x) &&
+	PX4_ISFINITE(set_avoidance_triplet_ned.ctrl_y) &&
+	PX4_ISFINITE(set_avoidance_triplet_ned.ctrl_z) &&
+	PX4_ISFINITE(set_avoidance_triplet_ned.next_x) &&
+	PX4_ISFINITE(set_avoidance_triplet_ned.next_y) &&
+	PX4_ISFINITE(set_avoidance_triplet_ned.next_z);
+
+
+	/* only accept messages which are intended for this system */
+	/* ToDo: is that needed -> can be removed from pos control ? */
+
+	if (values_finite) {
+
+		struct offboard_control_mode_s offboard_control_mode = {};
+
+		/* create to offboard control structure */
+		/* for now: ignore everything accept avoidance triplet*/
+		offboard_control_mode.ignore_position = true;
+		offboard_control_mode.ignore_alt_hold = true;
+		offboard_control_mode.ignore_velocity = true;
+		offboard_control_mode.ignore_acceleration_force = true;
+		offboard_control_mode.ignore_attitude = true;
+		offboard_control_mode.ignore_bodyrate = true;
+
+		/* do avoidance triplet */
+		offboard_control_mode.ignore_avoidance_triplet = false;
+
+		offboard_control_mode.timestamp = hrt_absolute_time();
+
+		/* send offboard mode */
+		if (_offboard_control_mode_pub == nullptr) {
+			_offboard_control_mode_pub = orb_advertise(
+					ORB_ID(offboard_control_mode), &offboard_control_mode);
+
+		} else {
+			orb_publish(ORB_ID(offboard_control_mode),
+					_offboard_control_mode_pub, &offboard_control_mode);
+		}
+
+		/* If we are in offboard control mode */
+		if (_mavlink->get_forward_externalsp()) {
+			bool updated;
+			orb_check(_control_mode_sub, &updated);
+
+			if (updated) {
+				orb_copy(ORB_ID(vehicle_control_mode), _control_mode_sub,
+						&_control_mode);
+			}
+
+			if (_control_mode.flag_control_offboard_enabled) {
+				if (!_offboard_control_mode.ignore_avoidance_triplet) {
+					/* offboard setpoint is avoidance triplet */
+
+
+					struct avoidance_triplet_s f;
+					memset(&f, 0, sizeof(f));
+
+					f.timestamp = hrt_absolute_time();
+					f.time_us = set_avoidance_triplet_ned.time_usec;
+					f.gen_count = set_avoidance_triplet_ned.gen_count;
+
+					f.prev_pt[0] = set_avoidance_triplet_ned.prev_x;
+					f.prev_pt[1] = set_avoidance_triplet_ned.prev_y;
+					f.prev_pt[2] = set_avoidance_triplet_ned.prev_z;
+
+					f.ctrl_pt[0] = set_avoidance_triplet_ned.ctrl_x;
+					f.ctrl_pt[1] = set_avoidance_triplet_ned.ctrl_y;
+					f.ctrl_pt[2] = set_avoidance_triplet_ned.ctrl_z;
+
+					f.next_pt[0] = set_avoidance_triplet_ned.next_x;
+					f.next_pt[1] = set_avoidance_triplet_ned.next_y;
+					f.next_pt[2] = set_avoidance_triplet_ned.next_z;
+
+					f.max_acc = set_avoidance_triplet_ned.max_acc;
+					f.acc_per_error = set_avoidance_triplet_ned.acc_per_err;
+
+					if (_avoidance_triplet_pub == nullptr) {
+						_avoidance_triplet_pub = orb_advertise(
+								ORB_ID(avoidance_triplet), &f);
+					} else {
+						orb_publish(ORB_ID(avoidance_triplet),
+								_avoidance_triplet_pub, &f);
+					}
+
+				}
+
+			}
+		}
+
+	}
+
 }
 
 void
@@ -799,6 +867,7 @@ MavlinkReceiver::handle_message_set_position_target_local_ned(mavlink_message_t 
 		offboard_control_mode.ignore_alt_hold = (bool)(set_position_target_local_ned.type_mask & 0x4);
 		offboard_control_mode.ignore_velocity = (bool)(set_position_target_local_ned.type_mask & 0x38);
 		offboard_control_mode.ignore_acceleration_force = (bool)(set_position_target_local_ned.type_mask & 0x1C0);
+		offboard_control_mode.ignore_avoidance_triplet = true;
 		bool is_force_sp = (bool)(set_position_target_local_ned.type_mask & (1 << 9));
 		/* yaw ignore flag mapps to ignore_attitude */
 		offboard_control_mode.ignore_attitude = (bool)(set_position_target_local_ned.type_mask & 0x400);
