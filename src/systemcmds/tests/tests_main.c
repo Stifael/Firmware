@@ -112,6 +112,7 @@ const struct {
 	{"int",			test_int,	0},
 	{"jig_voltages",	test_jig_voltages,	OPT_NOALLTEST},
 	{"mathlib",		test_mathlib,	0},
+	{"search_min", test_search_min, 0},
 	{"matrix",		test_matrix,	0},
 	{"mount",		test_mount,	OPT_NOJIGTEST | OPT_NOALLTEST},
 	{"param",		test_param,	0},
