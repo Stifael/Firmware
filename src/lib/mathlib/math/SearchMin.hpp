@@ -48,19 +48,23 @@ namespace math
 {
 
 // Type-safe abs
-template<typename T>
-int abs(T val)
+template<typename _Tp>
+_Tp abs_t(_Tp val)
 {
-	return ((val > 0) * val);
+	return ((val > (_Tp)0) ? val : -val);
 }
 
+// golden section search to find extremeum for function with minimum
 template<typename _Tp>
-inline const _Tp goldensection(const _Tp &a, const _Tp &b, _Tp(*fun)(_Tp), const _Tp &tol)
+inline const _Tp goldensection(const _Tp &arg1, const _Tp &arg2, _Tp(*fun)(_Tp), const _Tp &tol)
 {
+	_Tp a = arg1;
+	_Tp b = arg2;
 	_Tp c = b - (b - a) / ((_Tp)GOLDEN_RATIO);
 	_Tp d = a + (b - a) / ((_Tp)GOLDEN_RATIO);
 
-	while (abs(c - d) > tol) {
+	while (abs_t(c - d) > tol) {
+
 		if (fun(c) < fun(d)) {
 			b = d;
 
@@ -73,6 +77,6 @@ inline const _Tp goldensection(const _Tp &a, const _Tp &b, _Tp(*fun)(_Tp), const
 
 	}
 
-	return (b + a) * (_Tp)0.5;
+	return ((b + a) / (_Tp)2);
 }
 }
