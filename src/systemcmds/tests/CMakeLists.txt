@@ -63,6 +63,7 @@ set(srcs
 	test_uart_loopback.c
 	test_uart_send.c
 	test_versioning.cpp
+	test_search_min.cpp
 	tests_main.c
 	)
 
