@@ -126,7 +126,6 @@ set(config_module_list
 	lib/tailsitter_recovery
 	lib/terrain_estimation
 	lib/version
-	lib/bezi
 
 
 	#
