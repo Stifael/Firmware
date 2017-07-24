@@ -43,7 +43,7 @@
 namespace bezier
 {
 
-#define GOLDEN_RATIO 1.61803398f //(sqrt(5)-1)/2
+#define GOLDEN_RATIO 1.61803398f //(sqrt(5)+1)/2
 #define RESOLUTION 0.0001f  //represents resolution; end criterion for golden section search
 
 
@@ -110,7 +110,6 @@ void
 BezierQuad::setBezFromVel(const matrix::Vector3f &ctrl, const matrix::Vector3f &vel0, const matrix::Vector3f &vel1,
 			  const float duration)
 {
-
 	/* update bezier points */
 	_ctrl = ctrl;
 	_duration = duration;
@@ -134,7 +133,6 @@ BezierQuad::getDistToClosestPoint(const matrix::Vector3f &pose)
 float
 BezierQuad::getArcLength(const float resolution)
 {
-
 	// get number of elements
 	int n = (int)(roundf(_duration / resolution));
 	matrix::Vector3f v0, vn;
@@ -161,7 +159,6 @@ BezierQuad::getArcLength(const float resolution)
 		} else {
 			area += 2.0f * y.length();
 		}
-
 	}
 
 	v0 = getVelocity(0.0f);
@@ -212,6 +209,5 @@ BezierQuad::_getDistanceSquared(const float t, const matrix::Vector3f &pose)
 
 	/* norm squared */
 	return (vec * vec);
-
 }
 }
