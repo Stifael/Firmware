@@ -64,6 +64,7 @@ set(srcs
 	test_uart_loopback.c
 	test_uart_send.c
 	test_search_min.cpp
+	test_bezierQuad.cpp
 	tests_main.c
 	)
 
