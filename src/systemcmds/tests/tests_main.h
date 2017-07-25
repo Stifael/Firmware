@@ -89,6 +89,7 @@ extern int	test_uart_send(int argc, char *argv[]);
 extern int	test_versioning(int argc, char *argv[]);
 extern int	test_parameters(int argc, char *argv[]);
 extern int 	test_search_min(int argc, char *argv[]);
+extern int 	test_bezierQuad(int argc, char *argv[]);
 
 /* external */
 extern int commander_tests_main(int argc, char *argv[]);

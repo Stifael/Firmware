@@ -64,6 +64,7 @@ set(srcs
 	test_uart_send.c
 	test_versioning.cpp
 	test_search_min.cpp
+	test_bezierQuad.cpp
 	tests_main.c
 	)
 
