@@ -163,7 +163,6 @@ bool SearchMinTest::_no_extremum()
 	fun = &_linear_function_flat;
 
 	float opt = math::goldensection(a, b, fun, tol);
-	PX4_INFO("opt: %.5f", (double)fun(opt));
 	ut_assert("linear function function opt not equal min", fabsf(fun(opt) - fun(b)) <= (tol));
 
 	return true;
