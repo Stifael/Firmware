@@ -73,7 +73,7 @@ public:
 	 */
 	BezierQuad(const matrix::Vector3f &pt0, const matrix::Vector3f &ctrl, const matrix::Vector3f &pt1,
 		   float duration = 1.0f):
-		_pt0(pt0), _ctrl(ctrl), _pt1(pt1), _duration(1.0f) {}
+		_pt0(pt0), _ctrl(ctrl), _pt1(pt1), _duration(duration) {}
 
 
 	/*
