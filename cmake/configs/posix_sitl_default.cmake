@@ -76,8 +76,6 @@ set(config_module_list
 	lib/tailsitter_recovery
 	lib/terrain_estimation
 	lib/version
-	lib/bezier
-
 
 	examples/px4_simple_app
 	examples/mc_att_control_multiplatform

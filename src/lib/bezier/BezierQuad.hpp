@@ -46,131 +46,134 @@
 //#include <mathlib/math/Vector.hpp>
 #include <matrix/math.hpp>
 
-
 namespace bezier
 {
-
-
+template<typename Tp>
 class __EXPORT BezierQuad
 {
 public:
+
+	using Data = matrix::Vector<Tp, 3>;
 
 	/**
 	 * empty constructor
 	 */
 	BezierQuad(void) :
-		_pt0(matrix::Vector3f()), _ctrl(matrix::Vector3f()), _pt1(matrix::Vector3f()), _duration(1.0f) {}
-
+		_pt0(Data()), _ctrl(Data()), _pt1(Data()), _duration(1.0f) {}
 
 	/**
 	 * constructor from array
 	 */
-	BezierQuad(const float pt0[3], const float ctrl[3], const float pt2[3], float duration = 1.0f) :
-		_pt0(matrix::Vector3f(pt0)), _ctrl(matrix::Vector3f(pt0)), _pt1(matrix::Vector3f(pt0)), _duration(duration) {}
+	BezierQuad(const Tp pt0[3], const Tp ctrl[3], const Tp pt1[3], Tp duration = 1.0f) :
+		_pt0(Data(pt0)), _ctrl(Data(ctrl)), _pt1(Data(pt1)), _duration(duration) {}
 
 	/**
 	 * constructor from vector
 	 */
-	BezierQuad(const matrix::Vector3f &pt0, const matrix::Vector3f &ctrl, const matrix::Vector3f &pt1,
-		   float duration = 1.0f):
+	BezierQuad(const Data &pt0, const Data &ctrl, const Data &pt1,
+		   Tp duration = 1.0f):
 		_pt0(pt0), _ctrl(ctrl), _pt1(pt1), _duration(duration) {}
 
 
 	/*
 	 * return bezier points
 	 */
-	void getBezier(matrix::Vector3f &pt0, matrix::Vector3f &ctrl, matrix::Vector3f &pt1);
+	void getBezier(Data &pt0, Data &ctrl, Data &pt1);
 
 	/*
 	 * get pt0
 	 */
-	matrix::Vector3f getPt0() {return _pt0;}
+	Data getPt0() {return _pt0;}
 
 	/*
 	 * get ctrl
 	 */
-	matrix::Vector3f getCtrl() {return _ctrl;}
+	Data getCtrl() {return _ctrl;}
 
 	/*
 	 * get pt1
 	 */
-	matrix::Vector3f getPt1() {return _pt1;}
+	Data getPt1() {return _pt1;}
 
 	/**
 	 * set new bezier points
 	 */
-	void setBezier(const matrix::Vector3f &pt0, const matrix::Vector3f &ctrl, const matrix::Vector3f &pt1,
-		       float duration = 1.0f);
+	void setBezier(const Data &pt0, const Data &ctrl, const Data &pt1,
+		       Tp duration = 1.0f);
 
 	/*
 	* set duration
 	*/
-	void setDuration(const float time) {_duration = time;}
+	void setDuration(const Tp time) {_duration = time;}
 
 	/**
 	 * get point on bezier point corresponding to t
 	 */
-	matrix::Vector3f getPoint(const float t);
+	Data getPoint(const Tp t);
 
 	/*
 	 * Distance to closest point given a position
 	 */
-	float getDistToClosestPoint(const matrix::Vector3f &pose);
+	Tp getDistToClosestPoint(const Data &pose);
 
 	/*
 	 * get velocity on bezier corresponding to t
 	 */
-	matrix::Vector3f getVelocity(const float t);
+	Data getVelocity(const Tp t);
 
 	/*
 	 * get acceleration on bezier corresponding to t
 	 */
-	matrix::Vector3f getAcceleration();
+	Data getAcceleration();
 
 	/*
 	 * get states on bezier corresponding to t
 	 */
-	void getStates(matrix::Vector3f &point, matrix::Vector3f &vel, matrix::Vector3f &acc, const float t);
+	void getStates(Data &point, Data &vel, Data &acc, const Tp t);
 
 	/*
 	 * get states on bezier which are closest to pose
 	 */
-	void getStatesClosest(matrix::Vector3f &point, matrix::Vector3f &vel, matrix::Vector3f &acc,
-			      const matrix::Vector3f pose);
+	void getStatesClosest(Data &point, Data &vel, Data &acc,
+			      const Data pose);
 
 	/*
 	 * compute bezier from velocity at bezier end points and ctrl point
 	 */
-	void setBezFromVel(const matrix::Vector3f &ctrl, const matrix::Vector3f &vel0, const matrix::Vector3f &vel1,
-			   const float duration = 1.0f);
+	void setBezFromVel(const Data &ctrl, const Data &vel0, const Data &vel1,
+			   const Tp duration = 1.0f);
 
 	/*
 	 * simpsons inegrattion applied to velocity
 	 */
-	float getArcLength(const float resolution);
+	Tp getArcLength(const Tp resolution);
 
 private:
 
 	/* control points */
-	matrix::Vector3f _pt0;
-	matrix::Vector3f _ctrl;
-	matrix::Vector3f _pt1;
-	float _duration;
-
+	Data _pt0;
+	Data _ctrl;
+	Data _pt1;
+	Tp _duration;
 
 	/*
 	 * Helper functions
 	 */
 
 	/* golden section search */
-	float _goldenSectionSearch(const matrix::Vector3f &pose);
+	Tp _goldenSectionSearch(const Data &pose);
 
 	/*
 	 * get distance to point on bezier
 	 */
-	float _getDistanceSquared(const float t, const matrix::Vector3f &pose);
+	Tp _getDistanceSquared(const Tp t, const Data &pose);
 
 
 };
+
+using BezierQuadf = BezierQuad<float>;
 }
+
+// include implementation
+#include "BezierQuad.cpp"
 

@@ -43,13 +43,12 @@
 namespace bezier
 {
 
-#define GOLDEN_RATIO 1.61803398f //(sqrt(5)+1)/2
-#define RESOLUTION 0.0001f  //represents resolution; end criterion for golden section search
+#define GOLDEN_RATIO 1.61803398 //(sqrt(5)+1)/2
+#define RESOLUTION 0.0001  //represents resolution; end criterion for golden section search
 
-
-void
-BezierQuad::setBezier(const matrix::Vector3f &pt0, const matrix::Vector3f &ctrl, const matrix::Vector3f &pt1,
-		      float duration)
+template<typename Tp>
+void BezierQuad<Tp>::setBezier(const Data &pt0, const Data &ctrl, const Data &pt1,
+			       Tp duration)
 {
 	_pt0 = pt0;
 	_ctrl = ctrl;
@@ -58,85 +57,84 @@ BezierQuad::setBezier(const matrix::Vector3f &pt0, const matrix::Vector3f &ctrl,
 
 }
 
-void
-BezierQuad::getBezier(matrix::Vector3f &pt0, matrix::Vector3f &ctrl, matrix::Vector3f &pt1)
+template<typename Tp>
+void BezierQuad<Tp>::getBezier(Data &pt0, Data &ctrl, Data &pt1)
 {
 	pt0 = _pt0;
 	ctrl = _ctrl;
 	pt1 = _pt1;
 }
 
-matrix::Vector3f
-BezierQuad::getPoint(const float t)
+template<typename Tp>
+matrix::Vector<Tp, 3> BezierQuad<Tp>::getPoint(const Tp t)
 {
-	return (_pt0 * (1 - t / _duration) * (1 - t / _duration) + _ctrl * 2.0f * (1 - t / _duration) * t / _duration +   _pt1 *
+	return (_pt0 * ((Tp)1 - t / _duration) * ((Tp)1 - t / _duration) + _ctrl * (Tp)2 * ((
+				Tp)1 - t / _duration) * t / _duration +   _pt1 *
 		t / _duration * t / _duration);
 }
 
-matrix::Vector3f
-BezierQuad::getVelocity(const float t)
+template<typename Tp>
+matrix::Vector<Tp, 3> BezierQuad<Tp>::getVelocity(const Tp t)
 {
-	return (((_ctrl - _pt0) * _duration + (_pt0 - _ctrl * 2.0f + _pt1) * t) * 2.0f / (_duration * _duration));
+	return (((_ctrl - _pt0) * _duration + (_pt0 - _ctrl * (Tp)2 + _pt1) * t) * (Tp)2 / (_duration * _duration));
 }
 
-matrix::Vector3f
-BezierQuad::getAcceleration()
+template<typename Tp>
+matrix::Vector<Tp, 3> BezierQuad<Tp>::getAcceleration()
 {
-	return ((_pt0 - _ctrl * 2.0f + _pt1) * 2.0f / (_duration * _duration));
+	return ((_pt0 - _ctrl * (Tp)2 + _pt1) * (Tp)2 / (_duration * _duration));
 }
 
-void
-BezierQuad::getStates(matrix::Vector3f &point, matrix::Vector3f &vel, matrix::Vector3f &acc, const float time)
+template<typename Tp>
+void BezierQuad<Tp>::getStates(Data &point, Data &vel, Data &acc, const Tp time)
 {
 	point = getPoint(time);
 	vel = getVelocity(time);
 	acc = getAcceleration();
 }
 
-
-void
-BezierQuad::getStatesClosest(matrix::Vector3f &point, matrix::Vector3f &vel, matrix::Vector3f &acc,
-			     const matrix::Vector3f pose)
+template<typename Tp>
+void BezierQuad<Tp>::getStatesClosest(Data &point, Data &vel, Data &acc,
+				      const Data pose)
 {
 	/* get t that corresponds to point closest on bezier point */
-	float t = _goldenSectionSearch(pose);
+	Tp t = _goldenSectionSearch(pose);
 
 	/* get states corresponding to t */
 	getStates(point, vel, acc, t);
 
 }
 
-void
-BezierQuad::setBezFromVel(const matrix::Vector3f &ctrl, const matrix::Vector3f &vel0, const matrix::Vector3f &vel1,
-			  const float duration)
+template<typename Tp>
+void BezierQuad<Tp>::setBezFromVel(const Data &ctrl, const Data &vel0, const Data &vel1,
+				   const Tp duration)
 {
 	/* update bezier points */
 	_ctrl = ctrl;
 	_duration = duration;
-	_pt0 = _ctrl - vel0 * _duration / 2.0f;
-	_pt1 = _ctrl + vel1 * _duration / 2.0f;
+	_pt0 = _ctrl - vel0 * _duration / (Tp)2;
+	_pt1 = _ctrl + vel1 * _duration / (Tp)2;
 }
 
-float
-BezierQuad::getDistToClosestPoint(const matrix::Vector3f &pose)
+template<typename Tp>
+Tp BezierQuad<Tp>::getDistToClosestPoint(const Data &pose)
 {
 
 	/* get t that corresponds to point closest on bezier point */
-	float t = _goldenSectionSearch(pose);
+	Tp t = _goldenSectionSearch(pose);
 
 	/* get closest point */
-	matrix::Vector3f point = getPoint(t);
+	Data point = getPoint(t);
 	return (pose - point).length();
 }
 
-
-float
-BezierQuad::getArcLength(const float resolution)
+template<typename Tp>
+Tp BezierQuad<Tp>::getArcLength(const Tp resolution)
 {
 	// get number of elements
 	int n = (int)(roundf(_duration / resolution));
-	matrix::Vector3f v0, vn;
-	float y0, yn;
+	Data v0, vn;
+	Tp y0, yn;
 
 	// check if n is even
 	if (n % 2 == 1) {
@@ -144,40 +142,39 @@ BezierQuad::getArcLength(const float resolution)
 	}
 
 	// step size
-	float h = (_duration) / n;
+	Tp h = (_duration) / n;
 	// get integration
-	float area = 0.0f;
-	matrix::Vector3f y;
+	Tp area = (Tp)0;
+	Data y;
 
 	for (int i = 1; i < n; i++) {
 
 		y = getVelocity(h * i);
 
 		if (i % 2 == 1) {
-			area += 4.0f * y.length();
+			area += (Tp)4 * y.length();
 
 		} else {
-			area += 2.0f * y.length();
+			area += (Tp)2 * y.length();
 		}
 	}
 
-	v0 = getVelocity(0.0f);
+	v0 = getVelocity((Tp)0.0);
 	vn = getVelocity(_duration);
 	y0 = v0.length();
 	yn = vn.length();
 
 	// 1/3 simpsons rule
-	area = h / 3.0f * (y0 + yn + area);
+	area = h / (Tp)3 * (y0 + yn + area);
 	return area;
 }
 
-
-float
-BezierQuad::_goldenSectionSearch(const matrix::Vector3f &pose)
+template<typename Tp>
+Tp BezierQuad<Tp>::_goldenSectionSearch(const Data &pose)
 {
-	float a, b, c, d;
-	a = 0.0f; //represents most left point
-	b = _duration * 1.0f; //represents most right point
+	Tp a, b, c, d;
+	a = (Tp)0; //represents most left point
+	b = _duration * (Tp)1; //represents most right point
 
 	c = b - (b - a) / GOLDEN_RATIO;
 	d = a + (b - a) / GOLDEN_RATIO;
@@ -195,14 +192,14 @@ BezierQuad::_goldenSectionSearch(const matrix::Vector3f &pose)
 
 	}
 
-	return (b + a) / 2.0f;
+	return (b + a) / (Tp)2;
 }
 
-float
-BezierQuad::_getDistanceSquared(const float t, const matrix::Vector3f &pose)
+template<typename Tp>
+Tp BezierQuad<Tp>::_getDistanceSquared(const Tp t, const Data &pose)
 {
 	/* get point on bezier */
-	matrix::Vector3f vec = getPoint(t);
+	Data vec = getPoint(t);
 
 	/* get vector from point to pose */
 	vec = vec - pose;
