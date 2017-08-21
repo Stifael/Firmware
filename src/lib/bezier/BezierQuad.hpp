@@ -172,6 +172,7 @@ private:
 };
 
 using BezierQuadf = BezierQuad<float>;
+using BezierQuadd = BezierQuad<double>;
 }
 
 // include implementation
