@@ -31,7 +31,7 @@ bool BezierQuadTest::_get_states_from_time()
 	matrix::Vector3f pt1(0.5f, 0.0f, 0.0f);
 
 	// create bezier with default t = [0,1]
-	bezier::BezierQuad bz(pt0, ctrl, pt1);
+	bezier::BezierQuadf bz(pt0, ctrl, pt1);
 
 	matrix::Vector3f pos, vel, acc;
 	float precision = 0.00001;
