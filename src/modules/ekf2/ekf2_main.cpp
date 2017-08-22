@@ -63,6 +63,7 @@
 #include <platforms/px4_defines.h>
 #include <drivers/drv_hrt.h>
 #include <controllib/uorb/blocks.hpp>
+#include <lib/conversion/rotation.h>
 
 #include <uORB/topics/sensor_combined.h>
 #include <uORB/topics/vehicle_gps_position.h>
@@ -586,7 +587,8 @@ void Ekf2::task_main()
 		if (range_finder_updated) {
 			orb_copy(ORB_ID(distance_sensor), range_finder_sub, &range_finder);
 
-			if (range_finder.min_distance >= range_finder.current_distance
+			if (range_finder.orientation != ROTATION_ROLL_180
+			    || range_finder.min_distance >= range_finder.current_distance
 			    || range_finder.max_distance <= range_finder.current_distance) {
 				range_finder_updated = false;
 			}
