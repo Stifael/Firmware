@@ -804,7 +804,7 @@ void Ekf2::task_main()
 			ev_data.posNED(0) = ev.x;
 			ev_data.posNED(1) = ev.y;
 			ev_data.posNED(2) = ev.z;
-			Quaternion q(ev.q);
+			Quatf q(ev.q);
 			ev_data.quat = q;
 
 			// position measurement error
@@ -1013,8 +1013,9 @@ void Ekf2::task_main()
 			matrix::Eulerf euler(q);
 			lpos.yaw = euler.psi();
 
+			lpos.dist_bottom_valid = _ekf.get_terrain_valid();
 			float terrain_vpos;
-			lpos.dist_bottom_valid = _ekf.get_terrain_vert_pos(&terrain_vpos);
+			_ekf.get_terrain_vert_pos(&terrain_vpos);
 			lpos.dist_bottom = terrain_vpos - pos[2]; // Distance to bottom surface (ground) in meters
 			lpos.dist_bottom_rate = -velocity[2]; // Distance to bottom surface (ground) change rate
 			lpos.surface_bottom_timestamp	= hrt_absolute_time(); // Time when new bottom surface found
