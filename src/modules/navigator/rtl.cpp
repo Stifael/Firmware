@@ -69,7 +69,9 @@ RTL::RTL(Navigator *navigator, const char *name) :
 	_param_min_loiter_alt(this, "MIS_LTRMIN_ALT", false),
 	_param_descend_alt(this, "RTL_DESCEND_ALT", false),
 	_param_land_delay(this, "RTL_LAND_DELAY", false),
-	_param_rtl_min_dist(this, "RTL_MIN_DIST", false)
+	_param_rtl_min_dist(this, "RTL_MIN_DIST", false),
+	_param_gf_alt(this, "GF_MAX_VER_DIST", false),
+	_param_gf_actions(this, "GF_ACTION", false)
 {
 	/* load initial params */
 	updateParams();
@@ -159,12 +161,20 @@ RTL::set_rtl_item()
 
 			/* limit altitude to rtl max */
 			climb_alt = math::min(_navigator->get_home_position()->alt + _param_return_alt.get(), climb_alt);
-
 			// do also not reduce altitude if already higher
 			climb_alt = math::max(climb_alt, _navigator->get_global_position()->alt);
 
 			// and also make sure that an absolute minimum altitude is obeyed so the landing gear does not catch.
 			climb_alt = math::max(climb_alt, _navigator->get_home_position()->alt + _param_min_loiter_alt.get());
+
+			// if RTL altitude outside geofence change it to the the max altitude allowed by the geofence
+			if ((_param_return_alt.get() > _param_gf_alt.get())
+			    && ((uint8_t)_param_gf_actions.get() != geofence_result_s::GF_ACTION_NONE)) {
+				climb_alt = math::min(climb_alt, _navigator->get_home_position()->alt + _param_gf_alt.get());
+				// check that max altitude set by geofence is not too low
+				float safe_altitude = 5.0;
+				climb_alt = math::max(climb_alt, safe_altitude);
+			}
 
 			_mission_item.lat = _navigator->get_global_position()->lat;
 			_mission_item.lon = _navigator->get_global_position()->lon;
