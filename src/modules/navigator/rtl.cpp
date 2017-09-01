@@ -171,8 +171,9 @@ RTL::set_rtl_item()
 			if ((_param_return_alt.get() > _param_gf_alt.get())
 			    && ((uint8_t)_param_gf_actions.get() != geofence_result_s::GF_ACTION_NONE)) {
 				climb_alt = math::min(climb_alt, _navigator->get_home_position()->alt + _param_gf_alt.get());
-				// check that max altitude set by geofence is not too low
-				float safe_altitude = 5.0;
+				/* check that max altitude set by geofence is not too low.
+				This is a safety check to avoid having the RTL altitude at humand head level. */
+				float safe_altitude = 5.0f;
 				climb_alt = math::max(climb_alt, safe_altitude);
 			}
 
