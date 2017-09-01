@@ -135,7 +135,9 @@ private:
 	/** Time in us that direction change condition has to be true for direction change state */
 	static constexpr uint64_t DIRECTION_CHANGE_TRIGGER_TIME_US = 100000;
 	/** Time in us that the no obstacle ahead condition has to be true to exit obstacle avoidance lock in */
-	static constexpr uint64_t FORWARD_MOVEMENT_TRIGGER_TIME_US = 500000;
+	static constexpr uint64_t OBSTACLE_LOCK_TRIGGER_TIME_US = 1000000;
+	/** Timeout in us for obstacle avoidance sonar data to get considered invalid */
+	static constexpr uint64_t SONAR_STREAM_TIMEOUT_US = 500000;
 
 	bool		_task_should_exit = false;			/**<true if task should exit */
 	bool		_gear_state_initialized = false;		/**<true if the gear state has been initialized */
@@ -157,7 +159,6 @@ private:
 	bool 		_in_takeoff = false; 				/**<true if takeoff ramp is applied */
 	bool 		_in_landing = false;				/**<true if landing descent (only used in auto) */
 	bool 		_lnd_reached_ground = false; 		/**<true if controller assumes the vehicle has reached the ground after landing */
-	bool 		_avoidance_lock_in = false;
 
 	int		_control_task;			/**< task handle for task */
 	orb_advert_t	_mavlink_log_pub;		/**< mavlink log advert */
@@ -223,10 +224,8 @@ private:
 	control::BlockDerivative _vel_y_deriv;
 	control::BlockDerivative _vel_z_deriv;
 
-
-
 	systemlib::Hysteresis _manual_direction_change_hysteresis;
-	systemlib::Hysteresis _allow_forward_movement_hysteresis;
+	systemlib::Hysteresis _obstacle_lock_hysteresis;
 
 	math::LowPassFilter2p _filter_manual_pitch;
 	math::LowPassFilter2p _filter_manual_roll;
@@ -314,7 +313,6 @@ private:
 	float _ref_alt;
 	hrt_abstime _ref_timestamp;
 	hrt_abstime _last_warn;
-	hrt_abstime _last_sonar_measurament_time;
 
 	math::Vector<3> _thrust_int;
 	math::Vector<3> _pos;
@@ -332,7 +330,7 @@ private:
 	math::Matrix<3, 3> _R;			/**< rotation matrix from attitude quaternions */
 	float _yaw;				/**< yaw angle (euler) */
 	float _yaw_takeoff;	/**< home yaw angle present when vehicle was taking off (euler) */
-	float _yaw_lock_in;
+	float _yaw_obstacle_lock; /**< yaw angle on sonar obstacle detection event */
 	float _vel_max_xy;  /**< equal to vel_max except in auto mode when close to target */
 	float _acceleration_state_dependent_xy; /* acceleration limit applied in manual mode */
 	float _acceleration_state_dependent_z; /* acceleration limit applied in manual mode in z */
@@ -521,7 +519,7 @@ MulticopterPositionControl::MulticopterPositionControl() :
 	_vel_y_deriv(this, "VELD"),
 	_vel_z_deriv(this, "VELD"),
 	_manual_direction_change_hysteresis(false),
-	_allow_forward_movement_hysteresis(false),
+	_obstacle_lock_hysteresis(false),
 	_filter_manual_pitch(50.0f, 10.0f),
 	_filter_manual_roll(50.0f, 10.0f),
 	_user_intention_xy(brake),
@@ -529,10 +527,9 @@ MulticopterPositionControl::MulticopterPositionControl() :
 	_ref_alt(0.0f),
 	_ref_timestamp(0),
 	_last_warn(0),
-	_last_sonar_measurament_time(0),
 	_yaw(0.0f),
 	_yaw_takeoff(0.0f),
-	_yaw_lock_in(0.0f),
+	_yaw_obstacle_lock(0.0f),
 	_vel_max_xy(0.0f),
 	_acceleration_state_dependent_xy(0.0f),
 	_acceleration_state_dependent_z(0.0f),
@@ -550,7 +547,7 @@ MulticopterPositionControl::MulticopterPositionControl() :
 
 	/* set trigger time for manual direction change detection */
 	_manual_direction_change_hysteresis.set_hysteresis_time_from(false, DIRECTION_CHANGE_TRIGGER_TIME_US);
-	_allow_forward_movement_hysteresis.set_hysteresis_time_from(false, FORWARD_MOVEMENT_TRIGGER_TIME_US);
+	_obstacle_lock_hysteresis.set_hysteresis_time_from(true, OBSTACLE_LOCK_TRIGGER_TIME_US);
 
 	memset(&_ref_pos, 0, sizeof(_ref_pos));
 
@@ -2606,49 +2603,44 @@ MulticopterPositionControl::calculate_velocity_setpoint(float dt)
 		vel_sp_slewrate(dt);
 	}
 
+	/* handle obstacle avoidance based on forward facing sonar measurements */
 	const bool obsavoid_on = _manual.obsavoid_switch == manual_control_setpoint_s::SWITCH_POS_ON;
 
 	if (obsavoid_on) {
-		bool obstacle_ahead = (_sonar_measurament.orientation == ROTATION_PITCH_90
-				       && _sonar_measurament.current_distance < _sonar_measurament.max_distance &&
-				       (altitude_above_home > 1.5f));
-
-		bool valid_sonar_measurament = (_sonar_measurament.timestamp > _last_sonar_measurament_time);
-		_last_sonar_measurament_time = _sonar_measurament.timestamp;
-
+		/* slow down in obstacle avoidance to allow for braking in front of an obstacle */
 		_vel_max_xy = 4.0f;
-		math::Vector<3> vel_sp_body = _R.transposed() * _vel_sp;
 
-		/* if there is an obstacle ahead and UAV is moving forwards enter obstacle avoidance mode*/
-		if (obstacle_ahead && !_avoidance_lock_in && (vel_sp_body(0) > 0.0f) && valid_sonar_measurament) {
-			_avoidance_lock_in = true;
-			_yaw_lock_in = _yaw;
-			warn_rate_limited("Obstacle detected.");
+		/* sonar is pointing forward, data stream is running, omit floor detection in low altitude */
+		const bool valid_sonar_measurament = _sonar_measurament.orientation == ROTATION_PITCH_90 &&
+						     hrt_elapsed_time((hrt_abstime *)&_sonar_measurament.timestamp) < SONAR_STREAM_TIMEOUT_US &&
+						     altitude_above_home > 1.5f;
+		/* anything but maximum distance measurement is considered an obstacle */
+		const bool obstacle_ahead = _sonar_measurament.current_distance < _sonar_measurament.max_distance;
+
+		if (valid_sonar_measurament && obstacle_ahead) {
+			_obstacle_lock_hysteresis.set_state_and_update(true);
+			_yaw_obstacle_lock = _yaw;
 		}
 
-		if (_avoidance_lock_in) {
-			bool no_obstacle_ahead = (_sonar_measurament.current_distance >= _sonar_measurament.max_distance);
-			_allow_forward_movement_hysteresis.set_state_and_update(no_obstacle_ahead);
+		if (_obstacle_lock_hysteresis.get_state()) {
+			/* calculate body frame xy velocity vector to check for desired forward movement */
+			math::Vector<3> vel_sp_body = _R.transposed() * _vel_sp;
 
-			/* exit obstacle if going backwards with velocity magnitude greater than 0.1 OR yaw more than 30 degrees with no obstacle ahead OR
-			 * no obstacle ahead for more than 0.5s*/
-			if (((vel_sp_body(0) < 0.0f) && (fabsf(vel_sp_body(0)) > 0.01f)) || ((fabsf(_yaw - _yaw_lock_in) > math::radians(30.0f))
-					&& no_obstacle_ahead) || (_allow_forward_movement_hysteresis.get_state())) {
-				_avoidance_lock_in = false;
-				warn_rate_limited("Exit obstacle avoidance.");
+			/* stay in obstacle lock when trying to go forwards without yawing 30 degree away from the last obstacle */
+			_obstacle_lock_hysteresis.set_state_and_update(vel_sp_body(0) > FLT_EPSILON &&
+					fabsf(_yaw - _yaw_obstacle_lock) > math::radians(30.0f));
 
-			} else {
-				/* set velocity to 0 in order to stop in front of an obstacle*/
-				_vel_sp(0) = 0.0f;
-				_vel_sp(1) = 0.0f;
-				/*change previous setpoint in oder for the slewrate to be correct when exiting obstacle avoidance*/
-				_vel_sp_prev = _vel_sp;
-			}
+			/* don't allow forward or sidewards movement to stop in front of an obstacle */
+			vel_sp_body(0) = math::min(vel_sp_body(0), 0.0f);
+			vel_sp_body(1) = 0.0f;
+			_vel_sp = _R * vel_sp_body;
+			/*change previous setpoint in oder for the slewrate to be correct when exiting obstacle avoidance*/
+			_vel_sp_prev = _vel_sp;
 		}
 
 	} else {
-		// reset flag if obstacle avoidance off
-		_avoidance_lock_in = false;
+		/* release lock if obstacle avoidance off */
+		_obstacle_lock_hysteresis.set_state_and_update(false);
 	}
 
 	/* TODO: move this to the end
