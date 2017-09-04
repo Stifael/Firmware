@@ -1,5 +1,8 @@
 #include <unit_test/unit_test.h>
 #include <float.h>
+#include <stdlib.h>
+#include <time.h>
+
 
 #include "../../lib/bezier/BezierQuad.hpp"
 
@@ -11,7 +14,9 @@ public:
 private:
 
 	bool _get_states_from_time();
+	bool _get_arc_length();
 
+	float random(float min, float max);
 
 };
 
@@ -19,13 +24,14 @@ private:
 bool BezierQuadTest::run_tests()
 {
 	ut_run_test(_get_states_from_time);
+	ut_run_test(_get_arc_length);
 
 	return (_tests_failed == 0);
 }
 
 bool BezierQuadTest::_get_states_from_time()
 {
-	// symmyetric around 0
+	// symmetric around 0
 	matrix::Vector3f pt0(-0.5f, 0.0f, 0.0f);
 	matrix::Vector3f ctrl(0.0f, 0.5f, 0.0f);
 	matrix::Vector3f pt1(0.5f, 0.0f, 0.0f);
@@ -119,7 +125,7 @@ bool BezierQuadTest::_get_states_from_time()
 	ut_compare_float("acc not equal 0", acc(1), 0.0f, precision);
 	ut_compare_float("acc not equal 0", acc(2), 0.0f, precision);
 
-	// states at time = 1.0
+	// states at time = 0.5
 	bz.getStates(pos, vel, acc, 0.5f);
 
 	ut_compare_float("slope not equal 1", vel(0), 1.0f, precision);
@@ -133,5 +139,66 @@ bool BezierQuadTest::_get_states_from_time()
 	return true;
 
 }
+
+bool BezierQuadTest::_get_arc_length()
+{
+	// create random numbers
+	srand(0); // choose a constant to make it deterministic
+
+	float min = -50.f;
+	float max = 50.f;
+	float resolution = 0.1f;
+
+	matrix::Vector3f pt0, pt1, ctrl;
+	float duration, arc_length, triangle_length, straigth_length;
+	float T = 100.0f;
+
+	// loop trough different control points 100x and check if arc_length is in the expected range
+	for (int i = 0; i < 100 ; i++) {
+		// random bezier point
+		pt0 = matrix::Vector3f(random(min, max), random(min, max), random(min, max));
+		pt1 = matrix::Vector3f(random(min, max), random(min, max), random(min, max));
+		ctrl = matrix::Vector3f(random(min, max), random(min, max), random(min, max));
+
+		// use for each test a new duration
+		duration = random(0.0f, T);
+
+		// create bezier
+		bezier::BezierQuadf bz(pt0, ctrl, pt1, duration);
+
+		// compute arc length, triangle length and straigh length
+		arc_length = bz.getArcLength(resolution);
+		triangle_length = (ctrl - pt0).length() + (pt1 - ctrl).length();
+		straigth_length = (pt1 - pt0).length();
+
+		// we also compute length from going point to point and add segment
+		float time_increment = duration / T;
+		float t = 0.0f + time_increment;
+		matrix::Vector3f p0 = pt0;
+		float sum_segments = 0.0f;
+
+		for (int s = 0; s < (int)T; s++) {
+			matrix::Vector3f nextpt = bz.getPoint(t);
+			sum_segments = (nextpt - p0).length() + sum_segments;
+			p0 = bz.getPoint(t);
+			t = t + time_increment;
+		}
+
+		// test comparisons
+		ut_assert_true((triangle_length >= arc_length) && (arc_length >= straigth_length)
+			       && (fabsf(arc_length - sum_segments) < 1.f));
+	}
+
+
+	return true;
+}
+
+float BezierQuadTest::random(float min, float max)
+{
+	float s = rand() / (float)RAND_MAX;
+	return (min + s * (max - min));
+
+}
+
 
 ut_declare_test_c(test_bezierQuad, BezierQuadTest)
