@@ -156,6 +156,10 @@ private:
 	Data _pt1;
 	Tp _duration;
 
+	/* cache */
+	Tp _arc_length;
+	bool _cache_updated = false;
+
 	/*
 	 * Helper functions
 	 */
