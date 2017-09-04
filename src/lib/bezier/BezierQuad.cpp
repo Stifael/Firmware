@@ -54,6 +54,7 @@ void BezierQuad<Tp>::setBezier(const Data &pt0, const Data &ctrl, const Data &pt
 	_ctrl = ctrl;
 	_pt1 = pt1;
 	_duration = duration;
+	_cache_updated = false;
 
 }
 
@@ -114,23 +115,17 @@ void BezierQuad<Tp>::setBezFromVel(const Data &ctrl, const Data &vel0, const Dat
 	_duration = duration;
 	_pt0 = _ctrl - vel0 * _duration / (Tp)2;
 	_pt1 = _ctrl + vel1 * _duration / (Tp)2;
-}
-
-template<typename Tp>
-Tp BezierQuad<Tp>::getDistToClosestPoint(const Data &pose)
-{
-
-	/* get t that corresponds to point closest on bezier point */
-	Tp t = _goldenSectionSearch(pose);
-
-	/* get closest point */
-	Data point = getPoint(t);
-	return (pose - point).length();
+	_cache_updated = false;
 }
 
 template<typename Tp>
 Tp BezierQuad<Tp>::getArcLength(const Tp resolution)
 {
+	// we don't need to recompute arc length
+	if (_cache_updated) {
+		return _arc_length;
+	}
+
 	// get number of elements
 	int n = (int)(roundf(_duration / resolution));
 	Data v0, vn;
@@ -159,15 +154,34 @@ Tp BezierQuad<Tp>::getArcLength(const Tp resolution)
 		}
 	}
 
-	v0 = getVelocity((Tp)0.0);
+	v0 = getVelocity((Tp)0);
 	vn = getVelocity(_duration);
 	y0 = v0.length();
 	yn = vn.length();
 
 	// 1/3 simpsons rule
 	area = h / (Tp)3 * (y0 + yn + area);
+
+	_cache_updated = true;
+
 	return area;
 }
+
+template<typename Tp>
+Tp BezierQuad<Tp>::getDistToClosestPoint(const Data &pose)
+{
+
+	/* get t that corresponds to point closest on bezier point */
+	Tp t = _goldenSectionSearch(pose);
+
+	/* get closest point */
+	Data point = getPoint(t);
+	return (pose - point).length();
+}
+
+/*
+ * HELPER FUNCTIONS (private)
+ */
 
 template<typename Tp>
 Tp BezierQuad<Tp>::_goldenSectionSearch(const Data &pose)
