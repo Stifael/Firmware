@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   Copyright (C) 2012 PX4 Development Team. All rights reserved.
+ *   Copyright (C) 2017 PX4 Development Team. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -157,8 +157,8 @@ private:
 	Tp _duration;
 
 	/* cache */
-	Tp _arc_length;
-	bool _cache_updated = false;
+	Tp _cached_arc_length = (Tp)0;
+	Tp _cached_resolution = (Tp)(-1); // negative number means that cache is not up to date
 
 	/*
 	 * Helper functions
