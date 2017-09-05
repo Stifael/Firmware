@@ -54,7 +54,7 @@ void BezierQuad<Tp>::setBezier(const Data &pt0, const Data &ctrl, const Data &pt
 	_ctrl = ctrl;
 	_pt1 = pt1;
 	_duration = duration;
-	_cache_updated = false;
+	_cached_resolution = (Tp)(-1);
 
 }
 
@@ -115,15 +115,16 @@ void BezierQuad<Tp>::setBezFromVel(const Data &ctrl, const Data &vel0, const Dat
 	_duration = duration;
 	_pt0 = _ctrl - vel0 * _duration / (Tp)2;
 	_pt1 = _ctrl + vel1 * _duration / (Tp)2;
-	_cache_updated = false;
+	_cached_resolution = (Tp)(-1);
 }
 
 template<typename Tp>
 Tp BezierQuad<Tp>::getArcLength(const Tp resolution)
 {
-	// we don't need to recompute arc length
-	if (_cache_updated) {
-		return _arc_length;
+	// we don't need to recompute arc length if:
+	// 1. _cached_resolution is up to date; 2. _cached_resolution is smaller than desired resolution (= more accurate)
+	if ((_cached_resolution > (Tp)0) && (_cached_resolution <= resolution)) {
+		return _cached_arc_length;
 	}
 
 	// get number of elements
@@ -162,7 +163,8 @@ Tp BezierQuad<Tp>::getArcLength(const Tp resolution)
 	// 1/3 simpsons rule
 	area = h / (Tp)3 * (y0 + yn + area);
 
-	_cache_updated = true;
+	// update cached resolution
+	_cached_resolution = resolution;
 
 	return area;
 }
