@@ -15,6 +15,7 @@ private:
 
 	bool _get_states_from_time();
 	bool _get_arc_length();
+	bool _set_bez_from_vel();
 
 	float random(float min, float max);
 
@@ -25,6 +26,7 @@ bool BezierQuadTest::run_tests()
 {
 	ut_run_test(_get_states_from_time);
 	ut_run_test(_get_arc_length);
+	ut_run_test(_set_bez_from_vel);
 
 	return (_tests_failed == 0);
 }
@@ -189,6 +191,42 @@ bool BezierQuadTest::_get_arc_length()
 			       && (fabsf(arc_length - sum_segments) < 1.f));
 	}
 
+
+	return true;
+}
+
+bool BezierQuadTest::_set_bez_from_vel()
+{
+	// create random numbers
+	srand(100); // choose a constant to make it deterministic
+
+	float low = -50.0f;
+	float max = 50.0f;
+	float precision = 0.001f;
+
+	for (int i = 0; i < 20; i++) {
+
+		// set velocity
+		matrix::Vector3f ctrl(random(low, max), random(low, max), random(low, max));
+		matrix::Vector3f vel0(random(low, max), random(low, max), random(low, max));
+		matrix::Vector3f vel1(random(low, max), random(low, max), random(low, max));
+		float duration = random(0.0f, 100.0f);
+
+		bezier::BezierQuadf bz;;
+		bz.setBezFromVel(ctrl, vel0, vel1, duration);
+
+		// get velocity back
+		matrix::Vector3f v0 = bz.getVelocity(0.0f);
+		matrix::Vector3f v1 = bz.getVelocity(duration);
+		ut_compare_float("", vel0(0), v0(0), precision);
+		ut_compare_float("", vel1(0), v1(0), precision);
+
+		ut_compare_float("", vel0(1), v0(1), precision);
+		ut_compare_float("", vel1(1), v1(1), precision);
+
+		ut_compare_float("", vel0(2), v0(2), precision);
+		ut_compare_float("", vel1(2), v1(2), precision);
+	}
 
 	return true;
 }
