@@ -174,7 +174,8 @@ RTL::set_rtl_item()
 				/* check that max altitude set by geofence is not too low.
 				This is a safety check to avoid having the RTL altitude at humand head level. */
 				float safe_altitude = 5.0f;
-				climb_alt = math::max(climb_alt, safe_altitude);
+				climb_alt = math::max(climb_alt, _navigator->get_home_position()->alt + safe_altitude);
+				PX4_INFO("alt %f ", (double)climb_alt);
 			}
 
 			_mission_item.lat = _navigator->get_global_position()->lat;
