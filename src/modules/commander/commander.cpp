@@ -276,7 +276,7 @@ int32_t low_bat_action = 0;
 // Geofence actions
 static bool geofence_loiter_on = false;
 static bool geofence_rtl_on = false;
-struct geofence_result_s geofence_result;
+static struct geofence_result_s geofence_result = {};
 
 enum class power_state_e : uint8_t
 {
