@@ -135,7 +135,7 @@ private:
 	/** Time in us that direction change condition has to be true for direction change state */
 	static constexpr uint64_t DIRECTION_CHANGE_TRIGGER_TIME_US = 100000;
 	/** Time in us that the no obstacle ahead condition has to be true to exit obstacle avoidance lock in */
-	static constexpr uint64_t OBSTACLE_LOCK_TRIGGER_TIME_US = 1000000;
+	static constexpr uint64_t OBSTACLE_LOCK_EXIT_TRIGGER_TIME_US = 1000000;
 	/** Timeout in us for obstacle avoidance sonar data to get considered invalid */
 	static constexpr uint64_t SONAR_STREAM_TIMEOUT_US = 500000;
 
@@ -330,7 +330,7 @@ private:
 	math::Matrix<3, 3> _R;			/**< rotation matrix from attitude quaternions */
 	float _yaw;				/**< yaw angle (euler) */
 	float _yaw_takeoff;	/**< home yaw angle present when vehicle was taking off (euler) */
-	float _yaw_obstacle_lock; /**< yaw angle on sonar obstacle detection event */
+	float _yaw_obstacle_lock; /**< the yaw angle at which the vehicle exits obstacle avoidance */
 	float _vel_max_xy;  /**< equal to vel_max except in auto mode when close to target */
 	float _acceleration_state_dependent_xy; /* acceleration limit applied in manual mode */
 	float _acceleration_state_dependent_z; /* acceleration limit applied in manual mode in z */
@@ -547,7 +547,7 @@ MulticopterPositionControl::MulticopterPositionControl() :
 
 	/* set trigger time for manual direction change detection */
 	_manual_direction_change_hysteresis.set_hysteresis_time_from(false, DIRECTION_CHANGE_TRIGGER_TIME_US);
-	_obstacle_lock_hysteresis.set_hysteresis_time_from(true, OBSTACLE_LOCK_TRIGGER_TIME_US);
+	_obstacle_lock_hysteresis.set_hysteresis_time_from(true, OBSTACLE_LOCK_EXIT_TRIGGER_TIME_US);
 
 	memset(&_ref_pos, 0, sizeof(_ref_pos));
 
