@@ -75,6 +75,7 @@ if [ "$(uname)" == "Darwin" ]; then
     install_name_tool -change "$builddir_abs/build_gazebo/libmav_msgs.dylib" "./build_gazebo/libmav_msgs.dylib" $builddir/build_gazebo/librotors_gazebo_motor_model.$lib_ending
     install_name_tool -change "$builddir_abs/build_gazebo/libmav_msgs.dylib" "./build_gazebo/libmav_msgs.dylib" $builddir/build_gazebo/librotors_gazebo_multirotor_base_plugin.$lib_ending
     install_name_tool -change "$builddir_abs/build_gazebo/libmav_msgs.dylib" "./build_gazebo/libmav_msgs.dylib" $builddir/build_gazebo/librotors_gazebo_wind_plugin.$lib_ending
+    install_name_tool -change "$builddir_abs/build_gazebo/libmav_msgs.dylib" "./build_gazebo/libmav_msgs.dylib" $builddir/build_gazebo/libgazebo_sonar_plugin.$lib_ending
 fi
 
 
@@ -93,6 +94,7 @@ cp $builddir/build_gazebo/librotors_gazebo_mavlink_interface.$lib_ending $tmpdir
 cp $builddir/build_gazebo/librotors_gazebo_motor_model.$lib_ending $tmpdir/build_gazebo/
 cp $builddir/build_gazebo/librotors_gazebo_multirotor_base_plugin.$lib_ending $tmpdir/build_gazebo/
 cp $builddir/build_gazebo/librotors_gazebo_wind_plugin.$lib_ending $tmpdir/build_gazebo/
+cp $builddir/build_gazebo/libgazebo_sonar_plugin.$lib_ending $tmpdir/build_gazebo/
 cp $firmwaredir/Tools/sitl_run.sh $tmpdir/Tools/
 cp $firmwaredir/posix-configs/SITL/init/ekf2/typhoon_h480 $tmpdir/posix-configs/SITL/init/default/
 cp $firmwaredir/Tools/posix_lldbinit $tmpdir/Tools/
