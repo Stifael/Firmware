@@ -74,11 +74,11 @@ script:
       PX4_DOCKER_REPO=px4io/px4-dev-clang ./Tools/docker_run.sh 'make clang-tidy-parallel';
     elif [ "${TRAVIS_OS_NAME}" = "osx" ]; then
       make tests;
+      ./Tools/px4_sitl_packager/create_px4_sitl_package.bash ./;
+      mkdir -p s3sitl;
+      cp Yuneec-SITL-Simulation-macOS-* s3sitl/Yuneec-SITL-Simulation-macOS.zip;
+      echo ${TRAVIS_TAG} > s3sitl/version;
     fi
-#./Tools/px4_sitl_packager/create_px4_sitl_package.bash ./;
-#mkdir -p s3sitl;
-#cp Yuneec-SITL-Simulation-macOS-* s3sitl/Yuneec-SITL-Simulation-macOS.zip;
-#echo ${TRAVIS_TAG} > s3sitl/version;
 
 after_success:
   - set -e
@@ -96,12 +96,11 @@ after_success:
       s3cmd --add-header=x-amz-meta-firmware-version:${TRAVIS_TAG} -m text/plain --acl-public --access_key=${AWS_ACCESS_KEY_ID} --secret_key=${AWS_SECRET_ACCESS_KEY} --add-header='Cache-Control:public, max-age=0' put s3sitl/version s3://${S3_BUCKET_NAME}/sitl/Linux/${TRAVIS_TAG}/version;
     fi;
   - if [[ "${TRAVIS_OS_NAME}" = "osx" && ! -z "${TRAVIS_TAG}" ]]; then
-      echo "nop";
+      s3cmd --add-header=x-amz-meta-firmware-version:${TRAVIS_TAG} -m application/octet-stream --acl-public --access_key=${AWS_ACCESS_KEY_ID} --secret_key=${AWS_SECRET_ACCESS_KEY} put s3sitl/Yuneec-SITL-Simulation-macOS.zip s3://${S3_BUCKET_NAME}/sitl/macOS/latest/Yuneec-SITL-Simulation-macOS.zip;
+      s3cmd --add-header=x-amz-meta-firmware-version:${TRAVIS_TAG} -m application/octet-stream --acl-public --access_key=${AWS_ACCESS_KEY_ID} --secret_key=${AWS_SECRET_ACCESS_KEY} put s3sitl/Yuneec-SITL-Simulation-macOS.zip s3://${S3_BUCKET_NAME}/sitl/macOS/${TRAVIS_TAG}/Yuneec-SITL-Simulation-macOS.zip;
+      s3cmd --add-header=x-amz-meta-firmware-version:${TRAVIS_TAG} -m text/plain --acl-public --access_key=${AWS_ACCESS_KEY_ID} --secret_key=${AWS_SECRET_ACCESS_KEY} put s3sitl/version s3://${S3_BUCKET_NAME}/sitl/macOS/latest/version;
+      s3cmd --add-header=x-amz-meta-firmware-version:${TRAVIS_TAG} -m text/plain --acl-public --access_key=${AWS_ACCESS_KEY_ID} --secret_key=${AWS_SECRET_ACCESS_KEY} put s3sitl/version s3://${S3_BUCKET_NAME}/sitl/macOS/${TRAVIS_TAG}/version;
     fi;
-# s3cmd --add-header=x-amz-meta-firmware-version:${TRAVIS_TAG} -m application/octet-stream --acl-public --access_key=${AWS_ACCESS_KEY_ID} --secret_key=${AWS_SECRET_ACCESS_KEY} put s3sitl/Yuneec-SITL-Simulation-macOS.zip s3://${S3_BUCKET_NAME}/sitl/macOS/latest/Yuneec-SITL-Simulation-macOS.zip;
-# s3cmd --add-header=x-amz-meta-firmware-version:${TRAVIS_TAG} -m application/octet-stream --acl-public --access_key=${AWS_ACCESS_KEY_ID} --secret_key=${AWS_SECRET_ACCESS_KEY} put s3sitl/Yuneec-SITL-Simulation-macOS.zip s3://${S3_BUCKET_NAME}/sitl/macOS/${TRAVIS_TAG}/Yuneec-SITL-Simulation-macOS.zip;
-# s3cmd --add-header=x-amz-meta-firmware-version:${TRAVIS_TAG} -m text/plain --acl-public --access_key=${AWS_ACCESS_KEY_ID} --secret_key=${AWS_SECRET_ACCESS_KEY} put s3sitl/version s3://${S3_BUCKET_NAME}/sitl/macOS/latest/version;
-# s3cmd --add-header=x-amz-meta-firmware-version:${TRAVIS_TAG} -m text/plain --acl-public --access_key=${AWS_ACCESS_KEY_ID} --secret_key=${AWS_SECRET_ACCESS_KEY} put s3sitl/version s3://${S3_BUCKET_NAME}/sitl/macOS/${TRAVIS_TAG}/version;
 
 deploy:
   - provider: releases
