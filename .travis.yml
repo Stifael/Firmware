@@ -101,6 +101,10 @@ after_success:
       s3cmd --add-header=x-amz-meta-firmware-version:${TRAVIS_TAG} -m text/plain --acl-public --access_key=${AWS_ACCESS_KEY_ID} --secret_key=${AWS_SECRET_ACCESS_KEY} put s3sitl/version s3://${S3_BUCKET_NAME}/sitl/macOS/latest/version;
       s3cmd --add-header=x-amz-meta-firmware-version:${TRAVIS_TAG} -m text/plain --acl-public --access_key=${AWS_ACCESS_KEY_ID} --secret_key=${AWS_SECRET_ACCESS_KEY} put s3sitl/version s3://${S3_BUCKET_NAME}/sitl/macOS/${TRAVIS_TAG}/version;
     fi;
+  - if [[ "${BUILD_TARGET}" = "qgc_firmware" && "${TRAVIS_EVENT_TYPE}" = "cron" ]]; then
+      DATE_TODAY=$(date +'%Y-%h-%d')
+      s3cmd -m application/octet-stream --acl-public --access_key=${AWS_ACCESS_KEY_ID} --secret_key=${AWS_SECRET_ACCESS_KEY} --add-header='Cache-Control:public, max-age=0' put s3autopilot/autopilot.yuneec s3://${S3_BUCKET_NAME}/daily/autopilot/${DATE_TODAY}_autopilot.yuneec;
+    fi;
 
 deploy:
   - provider: releases
