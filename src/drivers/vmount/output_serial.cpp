@@ -351,6 +351,13 @@ int OutputSerial::update(const ControlData *control_data)
 		gimbal_control.yaw_channel = 2048.f + yaw_angle * 10.f;
 
 	} else { //angle mode
+
+		// The gimbal expects an angle of [-180..180] degrees. If the input range
+		// is [0..360] we can fix that.
+		if (yaw_angle > 180.0f) {
+			yaw_angle -= 360.0f;
+		}
+
 		if (_cur_control_data->stabilize_axis[2]) {
 			gimbal_control.yaw_mode = 2100;
 
