@@ -647,6 +647,7 @@ HC_SR04::start_pwm()
 	// set PWM rate for the sonar to 20Hz
 	if (::ioctl(fd_pwm, PWM_SERVO_SET_UPDATE_RATE, 20) != OK) {
 		PX4_ERR("PWM_SERVO_SET_UPDATE_RATE fail");
+		::close(fd_pwm);
 		return PX4_ERROR;
 	}
 
@@ -656,23 +657,27 @@ HC_SR04::start_pwm()
 	// Get the group mask
 	if (::ioctl(fd_pwm, PWM_SERVO_GET_RATEGROUP(group), (unsigned long)&group_mask) != OK) {
 		PX4_ERR("PWM_SERVO_GET_RATEGROUP group %u fail", group);
+		::close(fd_pwm);
 		return PX4_ERROR;
 	}
 
 	// Apply group mask
 	if (::ioctl(fd_pwm, PWM_SERVO_SET_SELECT_UPDATE_RATE, group_mask) != OK) {
 		PX4_ERR("PWM_SERVO_SET_SELECT_UPDATE_RATE fail");
+		::close(fd_pwm);
 		return PX4_ERROR;
 	}
 
 	if (::ioctl(fd_pwm, PWM_SERVO_ARM, 0) != OK) {
 		PX4_ERR("PWM_SERVO_ARM fail");
+		::close(fd_pwm);
 		return PX4_ERROR;
 	}
 
 	// Set pulsewidth of 10ms specific for this sonar sensor
 	if (::ioctl(fd_pwm, PWM_SERVO_SET(group), 10) != OK) {
 		PX4_ERR("PWM_SERVO_SET group %u fail", group);
+		::close(fd_pwm);
 		return PX4_ERROR;
 	}
 
@@ -687,7 +692,7 @@ HC_SR04::stop_pwm()
 	int fd_pwm = ::open(PWM_OUTPUT0_DEVICE_PATH, O_RDWR);
 
 	if (fd_pwm == -1) {
-		PX4_WARN("PMW: px4_open fail\n");
+		PX4_WARN("PMW: px4_open fail");
 	}
 
 	if (::ioctl(fd_pwm, PWM_SERVO_SET_UPDATE_RATE, 50) != OK) {
