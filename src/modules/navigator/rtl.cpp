@@ -168,7 +168,7 @@ RTL::set_rtl_item()
 			climb_alt = math::max(climb_alt, _navigator->get_home_position()->alt + _param_min_loiter_alt.get());
 
 			// if RTL altitude is greater than the maximum allowed altitude, change RTL climb altitude to be inside the geofence
-			if ((_param_return_alt.get() > _param_gf_alt.get())
+			if ((_param_return_alt.get() > _param_gf_alt.get() && _param_gf_alt.get() > FLT_EPSILON)
 			    && ((uint8_t)_param_gf_actions.get() != geofence_result_s::GF_ACTION_NONE)) {
 				climb_alt = math::min(climb_alt, _navigator->get_home_position()->alt + _param_gf_alt.get());
 				/* This is a safety check to stay higher than people's heads. */
