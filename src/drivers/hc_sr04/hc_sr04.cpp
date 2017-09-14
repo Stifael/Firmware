@@ -77,7 +77,6 @@
 #include <uORB/Subscription.hpp>
 #include <uORB/topics/subsystem_info.h>
 #include <uORB/topics/distance_sensor.h>
-#include <uORB/topics/mc_virtual_attitude_setpoint.h>
 #include <uORB/topics/manual_control_setpoint.h>
 
 #include <lib/conversion/rotation.h>
@@ -751,8 +750,10 @@ HC_SR04::cycle()
 
 			if (manual.obsavoid_switch != manual_control_setpoint_s::SWITCH_POS_ON) {
 
-				stop_pwm();
-				_pwm_output_active = false;
+				if (_pwm_output_active) {
+					stop_pwm();
+					_pwm_output_active = false;
+				}
 
 			} else {
 
