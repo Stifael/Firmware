@@ -88,28 +88,26 @@ after_success:
       is_rc=`echo "$TRAVIS_TAG" | grep '^v[0-9]\+.[0-9]\+.[0-9]\+-[0-9]\+.[0-9]\+.[0-9]\+rc[0-9]\+$' | wc -l`;
       is_release=`echo "$TRAVIS_TAG" | grep '^v[0-9]\+.[0-9]\+.[0-9]\+-[0-9]\+.[0-9]\+.[0-9]\+$' | wc -l`;
 
-      if [[ is_rc -eq 1 ]]; then
-          echo "Release Candidate $TRAVIS_TAG";
-          s3cmd --add-header=x-amz-meta-firmware-version:${TRAVIS_TAG} -m application/octet-stream --acl-public --access_key=${AWS_ACCESS_KEY_ID} --secret_key=${AWS_SECRET_ACCESS_KEY} --add-header="Cache-Control:public, max-age=0" put s3autopilot/autopilot.yuneec s3://${S3_BUCKET_NAME}/autopilot/rc/autopilot-${TRAVIS_TAG}.yuneec;
-      elif [[ is_alpha -eq 1 ]]; then
-          echo "Alpha $TRAVIS_TAG";
-          s3cmd --add-header=x-amz-meta-firmware-version:${TRAVIS_TAG} -m application/octet-stream --acl-public --access_key=${AWS_ACCESS_KEY_ID} --secret_key=${AWS_SECRET_ACCESS_KEY} --add-header="Cache-Control:public, max-age=0" put s3autopilot/autopilot.yuneec s3://${S3_BUCKET_NAME}/autopilot/alpha/autopilot-${TRAVIS_TAG}.yuneec;
-      elif [[ is_beta -eq 1 ]]; then
-          echo "Beta $TRAVIS_TAG";
-          s3cmd --add-header=x-amz-meta-firmware-version:${TRAVIS_TAG} -m application/octet-stream --acl-public --access_key=${AWS_ACCESS_KEY_ID} --secret_key=${AWS_SECRET_ACCESS_KEY} --add-header="Cache-Control:public, max-age=0" put s3autopilot/autopilot.yuneec s3://${S3_BUCKET_NAME}/autopilot/beta/autopilot-${TRAVIS_TAG}.yuneec;
-      elif [[ is_release -eq 1 ]]; then
-          echo "Release $TRAVIS_TAG";
-          s3cmd --add-header=x-amz-meta-firmware-version:${TRAVIS_TAG} -m application/octet-stream --acl-public --access_key=${AWS_ACCESS_KEY_ID} --secret_key=${AWS_SECRET_ACCESS_KEY} --add-header="Cache-Control:public, max-age=0" put s3autopilot/autopilot.yuneec s3://${S3_BUCKET_NAME}/autopilot/latest/autopilot.yuneec;
-          s3cmd --add-header=x-amz-meta-firmware-version:${TRAVIS_TAG} -m application/octet-stream --acl-public --access_key=${AWS_ACCESS_KEY_ID} --secret_key=${AWS_SECRET_ACCESS_KEY} --add-header='Cache-Control:public, max-age=0' put s3autopilot/autopilot.yuneec s3://${S3_BUCKET_NAME}/autopilot/${TRAVIS_TAG}/autopilot.yuneec;
-          s3cmd --add-header=x-amz-meta-firmware-version:${TRAVIS_TAG} -m text/plain --acl-public --access_key=${AWS_ACCESS_KEY_ID} --secret_key=${AWS_SECRET_ACCESS_KEY} --add-header='Cache-Control:public, max-age=0' put s3autopilot/version s3://${S3_BUCKET_NAME}/autopilot/latest/version;
-          s3cmd --add-header=x-amz-meta-firmware-version:${TRAVIS_TAG} -m text/plain --acl-public --access_key=${AWS_ACCESS_KEY_ID} --secret_key=${AWS_SECRET_ACCESS_KEY} --add-header='Cache-Control:public, max-age=0' put s3autopilot/version s3://${S3_BUCKET_NAME}/autopilot/${TRAVIS_TAG}/version;
-          s3cmd --add-header=x-amz-meta-firmware-version:${TRAVIS_TAG} -m text/plain --acl-public --access_key=${AWS_ACCESS_KEY_ID} --secret_key=${AWS_SECRET_ACCESS_KEY} --add-header='Cache-Control:public, max-age=0' put s3autopilot/hash s3://${S3_BUCKET_NAME}/autopilot/latest/hash;
-          s3cmd --add-header=x-amz-meta-firmware-version:${TRAVIS_TAG} -m text/plain --acl-public --access_key=${AWS_ACCESS_KEY_ID} --secret_key=${AWS_SECRET_ACCESS_KEY} --add-header='Cache-Control:public, max-age=0' put s3autopilot/hash s3://${S3_BUCKET_NAME}/autopilot/${TRAVIS_TAG}/hash;
+      function upload_to_s3 { s3cmd --add-header=x-amz-meta-firmware-version:${TRAVIS_TAG} -m $3 --acl-public --access_key=${AWS_ACCESS_KEY_ID} --secret_key=${AWS_SECRET_ACCESS_KEY} --add-header="Cache-Control:public, max-age=0" put $1 s3://${S3_BUCKET_NAME}/$2; };
 
-          s3cmd --add-header=x-amz-meta-firmware-version:${TRAVIS_TAG} -m application/octet-stream --acl-public --access_key=${AWS_ACCESS_KEY_ID} --secret_key=${AWS_SECRET_ACCESS_KEY} --add-header='Cache-Control:public, max-age=0' put s3sitl/Yuneec-SITL-Simulation-Linux.zip s3://${S3_BUCKET_NAME}/sitl/Linux/latest/Yuneec-SITL-Simulation-Linux.zip;
-          s3cmd --add-header=x-amz-meta-firmware-version:${TRAVIS_TAG} -m application/octet-stream --acl-public --access_key=${AWS_ACCESS_KEY_ID} --secret_key=${AWS_SECRET_ACCESS_KEY} --add-header='Cache-Control:public, max-age=0' put s3sitl/Yuneec-SITL-Simulation-Linux.zip s3://${S3_BUCKET_NAME}/sitl/Linux/${TRAVIS_TAG}/Yuneec-SITL-Simulation-Linux.zip;
-          s3cmd --add-header=x-amz-meta-firmware-version:${TRAVIS_TAG} -m text/plain --acl-public --access_key=${AWS_ACCESS_KEY_ID} --secret_key=${AWS_SECRET_ACCESS_KEY} --add-header='Cache-Control:public, max-age=0' put s3sitl/version s3://${S3_BUCKET_NAME}/sitl/Linux/latest/version;
-          s3cmd --add-header=x-amz-meta-firmware-version:${TRAVIS_TAG} -m text/plain --acl-public --access_key=${AWS_ACCESS_KEY_ID} --secret_key=${AWS_SECRET_ACCESS_KEY} --add-header='Cache-Control:public, max-age=0' put s3sitl/version s3://${S3_BUCKET_NAME}/sitl/Linux/${TRAVIS_TAG}/version;
+      if [[ is_rc -eq 1 ]]; then
+          upload_to_s3 s3autopilot/autopilot.yuneec autopilot/rc/autopilot-${TRAVIS_TAG}.yuneec application/octet-stream;
+      elif [[ is_alpha -eq 1 ]]; then
+          upload_to_s3 s3autopilot/autopilot.yuneec autopilot/alpha/autopilot-${TRAVIS_TAG}.yuneec application/octet-stream;
+      elif [[ is_beta -eq 1 ]]; then
+          upload_to_s3 s3autopilot/autopilot.yuneec autopilot/beta/autopilot-${TRAVIS_TAG}.yuneec application/octet-stream;
+      elif [[ is_release -eq 1 ]]; then
+          upload_to_s3 s3autopilot/autopilot.yuneec autopilot/latest/autopilot.yuneec application/octet-stream;
+          upload_to_s3 s3autopilot/autopilot.yuneec autopilot/${TRAVIS_TAG}/autopilot.yuneec application/octet-stream;
+          upload_to_s3 s3autopilot/version autopilot/latest/version text/plain;
+          upload_to_s3 s3autopilot/version autopilot/${TRAVIS_TAG}/version text/plain;
+          upload_to_s3 s3autopilot/hash autopilot/latest/hash text/plain;
+          upload_to_s3 s3autopilot/hash autopilot/${TRAVIS_TAG}/hash text/plain;
+
+          upload_to_s3 s3sitl/Yuneec-SITL-Simulation-Linux.zip sitl/Linux/latest/Yuneec-SITL-Simulation-Linux.zip application/zip;
+          upload_to_s3 s3sitl/Yuneec-SITL-Simulation-Linux.zip sitl/Linux/${TRAVIS_TAG}/Yuneec-SITL-Simulation-Linux.zip application/zip;
+          upload_to_s3 s3sitl/version sitl/Linux/latest/version text/plain;
+          upload_to_s3 s3sitl/version sitl/Linux/${TRAVIS_TAG}/version text/plain;
       else
           echo "Version tag is invalid $TRAVIS_TAG";
           exit 1;
@@ -118,16 +116,18 @@ after_success:
   - if [[ "${TRAVIS_OS_NAME}" = "osx" && ! -z "${TRAVIS_TAG}" ]]; then
       is_release=`echo "$TRAVIS_TAG" | grep '^v[0-9]\+.[0-9]\+.[0-9]\+-[0-9]\+.[0-9]\+.[0-9]\+$' | wc -l`;
       if [[ is_release -eq 1 ]]; then
-        echo "Release $TRAVIS_TAG";
-        s3cmd --add-header=x-amz-meta-firmware-version:${TRAVIS_TAG} -m application/octet-stream --acl-public --access_key=${AWS_ACCESS_KEY_ID} --secret_key=${AWS_SECRET_ACCESS_KEY} put s3sitl/Yuneec-SITL-Simulation-macOS.zip s3://${S3_BUCKET_NAME}/sitl/macOS/latest/Yuneec-SITL-Simulation-macOS.zip;
-        s3cmd --add-header=x-amz-meta-firmware-version:${TRAVIS_TAG} -m application/octet-stream --acl-public --access_key=${AWS_ACCESS_KEY_ID} --secret_key=${AWS_SECRET_ACCESS_KEY} put s3sitl/Yuneec-SITL-Simulation-macOS.zip s3://${S3_BUCKET_NAME}/sitl/macOS/${TRAVIS_TAG}/Yuneec-SITL-Simulation-macOS.zip;
-        s3cmd --add-header=x-amz-meta-firmware-version:${TRAVIS_TAG} -m text/plain --acl-public --access_key=${AWS_ACCESS_KEY_ID} --secret_key=${AWS_SECRET_ACCESS_KEY} put s3sitl/version s3://${S3_BUCKET_NAME}/sitl/macOS/latest/version;
-        s3cmd --add-header=x-amz-meta-firmware-version:${TRAVIS_TAG} -m text/plain --acl-public --access_key=${AWS_ACCESS_KEY_ID} --secret_key=${AWS_SECRET_ACCESS_KEY} put s3sitl/version s3://${S3_BUCKET_NAME}/sitl/macOS/${TRAVIS_TAG}/version;
+        function upload_to_s3 { s3cmd --add-header=x-amz-meta-firmware-version:${TRAVIS_TAG} -m $3 --acl-public --access_key=${AWS_ACCESS_KEY_ID} --secret_key=${AWS_SECRET_ACCESS_KEY} --add-header="Cache-Control:public, max-age=0" put $1 s3://${S3_BUCKET_NAME}/$2; };
+
+        upload_to_s3 s3sitl/Yuneec-SITL-Simulation-macOS.zip sitl/macOS/latest/Yuneec-SITL-Simulation-macOS.zip application/zip;
+        upload_to_s3 s3sitl/Yuneec-SITL-Simulation-macOS.zip sitl/macOS/${TRAVIS_TAG}/Yuneec-SITL-Simulation-macOS.zip application/zip;
+        upload_to_s3 s3sitl/version sitl/macOS/latest/version text/plain;
+        upload_to_s3 s3sitl/version sitl/macOS/${TRAVIS_TAG}/version text/plain;
       fi;
     fi;
   - if [[ "${BUILD_TARGET}" = "qgc_firmware" && "${TRAVIS_EVENT_TYPE}" = "cron" ]]; then
       DATE_TODAY=$(date +'%Y-%h-%d');
-      s3cmd -m application/octet-stream --acl-public --access_key=${AWS_ACCESS_KEY_ID} --secret_key=${AWS_SECRET_ACCESS_KEY} --add-header='Cache-Control:public, max-age=0' put s3autopilot/autopilot.yuneec s3://${S3_BUCKET_NAME}/autopilot/daily/${TRAVIS_BRANCH}/${DATE_TODAY}_autopilot.yuneec;
+      function upload_to_s3 { s3cmd --add-header=x-amz-meta-firmware-version:${TRAVIS_TAG} -m $3 --acl-public --access_key=${AWS_ACCESS_KEY_ID} --secret_key=${AWS_SECRET_ACCESS_KEY} --add-header="Cache-Control:public, max-age=0" put $1 s3://${S3_BUCKET_NAME}/$2; };
+      upload_to_s3 s3autopilot/autopilot.yuneec autopilot/daily/${TRAVIS_BRANCH}/${DATE_TODAY}_autopilot.yuneec application/octet-stream;
     fi;
 
 deploy:
