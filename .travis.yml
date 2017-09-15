@@ -54,19 +54,18 @@ script:
   - set -e
   - if [[ "${BUILD_TARGET}" = "qgc_firmware" && "${TRAVIS_BRANCH}" != "coverity" ]]; then
       ./Tools/docker_run.sh 'PX4_RESTRICTED_BUILD=1 make check_px4fmu-v2_default check_px4fmu-v4_default check_tap-v2_default';
-
-      PX4_DOCKER_REPO=px4io/px4-dev-simulation ./Tools/docker_run.sh './Tools/px4_sitl_packager/create_px4_sitl_package.bash ./';
-      mkdir -p s3sitl;
-      cp Yuneec-SITL-Simulation-Linux-* s3sitl/Yuneec-SITL-Simulation-Linux.zip;
-      echo ${TRAVIS_TAG} > s3sitl/version;
-
-      cp build_tap-v2_default/src/firmware/nuttx/tap-v2_default.px4 build_tap-v2_default/src/firmware/nuttx/autopilot.px4;
-      ./Tools/generate_yuneec.py build_tap-v2_default/src/firmware/nuttx/tap-v2_default.px4 build_tap-v2_default/src/firmware/nuttx/autopilot.yuneec ${AUTOPILOT_AES_KEY};
-      mkdir -p s3autopilot;
-      cp build_tap-v2_default/src/firmware/nuttx/autopilot.yuneec s3autopilot;
-      echo ${TRAVIS_TAG} > s3autopilot/version;
-      sha256sum s3autopilot/autopilot.yuneec | head -c 64 > s3autopilot/hash;
     fi
+
+# PX4_DOCKER_REPO=px4io/px4-dev-simulation ./Tools/docker_run.sh './Tools/px4_sitl_packager/create_px4_sitl_package.bash ./';
+# mkdir -p s3sitl;
+# cp Yuneec-SITL-Simulation-Linux-* s3sitl/Yuneec-SITL-Simulation-Linux.zip;
+# echo ${TRAVIS_TAG} > s3sitl/version;
+# cp build_tap-v2_default/src/firmware/nuttx/tap-v2_default.px4 build_tap-v2_default/src/firmware/nuttx/autopilot.px4;
+# ./Tools/generate_yuneec.py build_tap-v2_default/src/firmware/nuttx/tap-v2_default.px4 build_tap-v2_default/src/firmware/nuttx/autopilot.yuneec ${AUTOPILOT_AES_KEY};
+# mkdir -p s3autopilot;
+# cp build_tap-v2_default/src/firmware/nuttx/autopilot.yuneec s3autopilot;
+# echo ${TRAVIS_TAG} > s3autopilot/version;
+# sha256sum s3autopilot/autopilot.yuneec | head -c 64 > s3autopilot/hash;
 
 # elif [[ "${BUILD_TARGET}" = "check_format" && "${TRAVIS_BRANCH}" != "coverity" ]]; then
 #   ./Tools/docker_run.sh 'make check_format';
@@ -85,6 +84,24 @@ after_success:
   - set -e
   - if [[ "${BUILD_TARGET}" = "qgc_firmware" && "${TRAVIS_BRANCH}" != "coverity" && ! -z "${TRAVIS_TAG}" ]]; then
       echo "Commit is tagged with ${TRAVIS_TAG}";
+
+      is_alpha=`echo "$TRAVIS_TAG" | grep '^v[0-9]\+.[0-9]\+.[0-9]\+-[0-9]\+.[0-9]\+.[0-9]\+alpha[0-9]\+$' | wc -l`;
+      is_beta=`echo "$TRAVIS_TAG" | grep '^v[0-9]\+.[0-9]\+.[0-9]\+-[0-9]\+.[0-9]\+.[0-9]\+beta[0-9]\+$' | wc -l`;
+      is_rc=`echo "$TRAVIS_TAG" | grep '^v[0-9]\+.[0-9]\+.[0-9]\+-[0-9]\+.[0-9]\+.[0-9]\+rc[0-9]\+$' | wc -l`;
+      is_release=`echo "$TRAVIS_TAG" | grep '^v[0-9]\+.[0-9]\+.[0-9]\+-[0-9]\+.[0-9]\+.[0-9]\+$' | wc -l`;
+
+      if [[ is_rc -eq 1 ]]; then
+          echo "Release Candidate $TRAVIS_TAG";
+      elif [[ is_alpha -eq 1 ]]; then
+          echo "Alpha $TRAVIS_TAG";
+      elif [[ is_beta -eq 1 ]]; then
+          echo "Beta $TRAVIS_TAG";
+      elif [[ is_release -eq 1 ]]; then
+          echo "Release $TRAVIS_TAG";
+      else
+          echo "Version tag is invalid $TRAVIS_TAG";
+          exit 1;
+      fi;
     fi;
 
 # s3cmd --add-header=x-amz-meta-firmware-version:${TRAVIS_TAG} -m application/octet-stream --acl-public --access_key=${AWS_ACCESS_KEY_ID} --secret_key=${AWS_SECRET_ACCESS_KEY} --add-header="Cache-Control:public, max-age=0" put s3autopilot/autopilot.yuneec s3://${S3_BUCKET_NAME}/autopilot/latest/autopilot.yuneec;
