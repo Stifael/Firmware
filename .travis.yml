@@ -20,33 +20,32 @@ matrix:
       services:
         - docker
       env: BUILD_TARGET=qgc_firmware
-
-# - os: linux
-#   sudo: required
-#   services:
-#     - docker
-#   env: BUILD_TARGET=check_format
-# - os: linux
-#   sudo: required
-#   services:
-#     - docker
-#   env: BUILD_TARGET=tests_linux
-# - os: linux
-#   sudo: required
-#   services:
-#     - docker
-#   env: BUILD_TARGET=clang-tidy
-# - os: osx
-#   sudo: true
-#   osx_image: xcode8.3
-#   env: BUILD_TARGET=tests
+    - os: linux
+      sudo: required
+      services:
+        - docker
+      env: BUILD_TARGET=check_format
+    - os: linux
+      sudo: required
+      services:
+        - docker
+      env: BUILD_TARGET=tests_linux
+    - os: linux
+      sudo: required
+      services:
+        - docker
+      env: BUILD_TARGET=clang-tidy
+    - os: osx
+      sudo: true
+      osx_image: xcode8.3
+      env: BUILD_TARGET=tests
 
 cache:
   ccache: true
 
-# - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then brew tap PX4/px4; brew update; brew install px4-dev; brew tap osrf/simulation; brew install gazebo7 opencv; brew install s3cmd && sudo -H easy_install pip && sudo -H pip install empy jinja2; fi
-# - if [[ "${TRAVIS_OS_NAME}" = "linux" && "${TRAVIS_BRANCH}" == "coverity" ]]; then sudo apt-get install genromfs && pip install empy jinja2; fi
 before_install:
+  - if [[ "${TRAVIS_OS_NAME}" = "linux" && "${TRAVIS_BRANCH}" == "coverity" ]]; then sudo apt-get install genromfs && pip install empy jinja2; fi
+  - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then brew tap PX4/px4; brew update; brew install px4-dev; brew tap osrf/simulation; brew install gazebo7 opencv; brew install s3cmd && sudo -H easy_install pip && sudo -H pip install empy jinja2; fi
   - if [[ "${BUILD_TARGET}" = "qgc_firmware" && "${TRAVIS_BRANCH}" != "coverity" ]]; then pip install --user s3cmd pycrypto pyserial; fi
 
 script:
@@ -54,37 +53,36 @@ script:
   - set -e
   - if [[ "${BUILD_TARGET}" = "qgc_firmware" && "${TRAVIS_BRANCH}" != "coverity" ]]; then
       ./Tools/docker_run.sh 'PX4_RESTRICTED_BUILD=1 make check_px4fmu-v2_default check_px4fmu-v4_default check_tap-v2_default';
-      PX4_DOCKER_REPO=px4io/px4-dev-simulation ./Tools/docker_run.sh './Tools/px4_sitl_packager/create_px4_sitl_package.bash ./';
 
+      PX4_DOCKER_REPO=px4io/px4-dev-simulation ./Tools/docker_run.sh './Tools/px4_sitl_packager/create_px4_sitl_package.bash ./';
       mkdir -p s3sitl;
       cp Yuneec-SITL-Simulation-Linux-* s3sitl/Yuneec-SITL-Simulation-Linux.zip;
       echo ${TRAVIS_TAG} > s3sitl/version;
+
       cp build_tap-v2_default/src/firmware/nuttx/tap-v2_default.px4 build_tap-v2_default/src/firmware/nuttx/autopilot.px4;
       ./Tools/generate_yuneec.py build_tap-v2_default/src/firmware/nuttx/tap-v2_default.px4 build_tap-v2_default/src/firmware/nuttx/autopilot.yuneec ${AUTOPILOT_AES_KEY};
       mkdir -p s3autopilot;
       cp build_tap-v2_default/src/firmware/nuttx/autopilot.yuneec s3autopilot;
       echo ${TRAVIS_TAG} > s3autopilot/version;
       sha256sum s3autopilot/autopilot.yuneec | head -c 64 > s3autopilot/hash;
-    fi
 
-# elif [[ "${BUILD_TARGET}" = "check_format" && "${TRAVIS_BRANCH}" != "coverity" ]]; then
-#   ./Tools/docker_run.sh 'make check_format';
-# elif [[ "${BUILD_TARGET}" = "tests_linux" && "${TRAVIS_BRANCH}" != "coverity" ]]; then
-#   ./Tools/docker_run.sh 'make tests';
-# elif [[ "${BUILD_TARGET}" = "clang-tidy" && "${TRAVIS_BRANCH}" != "coverity" ]]; then
-#   PX4_DOCKER_REPO=px4io/px4-dev-clang ./Tools/docker_run.sh 'make clang-tidy-parallel';
-# elif [ "${TRAVIS_OS_NAME}" = "osx" ]; then
-#   make tests;
-#   ./Tools/px4_sitl_packager/create_px4_sitl_package.bash ./;
-#   mkdir -p s3sitl;
-#   cp Yuneec-SITL-Simulation-macOS-* s3sitl/Yuneec-SITL-Simulation-macOS.zip;
-#   echo ${TRAVIS_TAG} > s3sitl/version;
+    elif [[ "${BUILD_TARGET}" = "check_format" && "${TRAVIS_BRANCH}" != "coverity" ]]; then
+      ./Tools/docker_run.sh 'make check_format';
+    elif [[ "${BUILD_TARGET}" = "tests_linux" && "${TRAVIS_BRANCH}" != "coverity" ]]; then
+      ./Tools/docker_run.sh 'make tests';
+    elif [[ "${BUILD_TARGET}" = "clang-tidy" && "${TRAVIS_BRANCH}" != "coverity" ]]; then
+      PX4_DOCKER_REPO=px4io/px4-dev-clang ./Tools/docker_run.sh 'make clang-tidy-parallel';
+    elif [ "${TRAVIS_OS_NAME}" = "osx" ]; then
+      make tests;
+      ./Tools/px4_sitl_packager/create_px4_sitl_package.bash ./;
+      mkdir -p s3sitl;
+      cp Yuneec-SITL-Simulation-macOS-* s3sitl/Yuneec-SITL-Simulation-macOS.zip;
+      echo ${TRAVIS_TAG} > s3sitl/version;
+    fi;
 
 after_success:
   - set -e
   - if [[ "${BUILD_TARGET}" = "qgc_firmware" && "${TRAVIS_BRANCH}" != "coverity" && ! -z "${TRAVIS_TAG}" ]]; then
-      echo "Commit is tagged with ${TRAVIS_TAG}";
-
       is_alpha=`echo "$TRAVIS_TAG" | grep '^v[0-9]\+.[0-9]\+.[0-9]\+-[0-9]\+.[0-9]\+.[0-9]\+alpha[0-9]\+$' | wc -l`;
       is_beta=`echo "$TRAVIS_TAG" | grep '^v[0-9]\+.[0-9]\+.[0-9]\+-[0-9]\+.[0-9]\+.[0-9]\+beta[0-9]\+$' | wc -l`;
       is_rc=`echo "$TRAVIS_TAG" | grep '^v[0-9]\+.[0-9]\+.[0-9]\+-[0-9]\+.[0-9]\+.[0-9]\+rc[0-9]\+$' | wc -l`;
@@ -132,25 +130,25 @@ after_success:
       s3cmd -m application/octet-stream --acl-public --access_key=${AWS_ACCESS_KEY_ID} --secret_key=${AWS_SECRET_ACCESS_KEY} --add-header='Cache-Control:public, max-age=0' put s3autopilot/autopilot.yuneec s3://${S3_BUCKET_NAME}/autopilot/daily/${TRAVIS_BRANCH}/${DATE_TODAY}_autopilot.yuneec;
     fi;
 
-# deploy:
-#   - provider: releases
-#     api_key:
-#       secure: JOpzpCEINcASeG541EiIiMszhD6tmsIO6ok6JTQAGX8ALnG5yae5n8ztZ2f8BHabhAH78Y3TADr0f94e/4KKhbsSoiPXtIl0qHxgNat4nAF8t9cZjm2xsIfhn9u+TpPLjwgY7IR11h+Uricd/7dwII+d4x6ksUgnp1EnmEGWfnOyeSy7IY0an1sfzraXpqOGyW+kWYQx/UDMUMeW1wgr5R2uw6Cmay2XUnMdBhT4icicKGoGs+aG4ehrHKi1GUjgRqA/FYGT2staMh7fyhdsC/RJgJzZP15GC5X2ixR9rJKiiPdnA0nTDJvDDCEAlnJlpe5zgg/KCM9dkE/ovOOV47q3H0Qq0ccOdjunV8+ajgEMdk1i7dFdT76I02v/faW7JrqssPFXK1WMPCX0cVq55IMm9ZBDPoO8ZM8Eh8mQYP+juOoXW105bXtFK/AG2I08rBNEOUOhu4s5M2JRxumc0gAk3U1XpiXlZ8tXSgCR6xtyzi6mrq3D+tVkNtzUGXRp1vgIX+mx03q/MBrPq+k0/ACyBVXe3s+CNVltxjqOfjkLGfZ8NiBrW6vIRWAkcU571eWaXu4COATQnYJEiL45JfAtxOHX9+gqbQFjAtUEkRXTzUYjJA9gVgrHuv1nVE3rzG0kS0FUjImZlB2YfpKfaJl7zmV9kD7+WSYvpiDJ80Y=
-#     file:
-#       - build_tap-v2_default/src/firmware/nuttx/autopilot.px4
-#       - build_tap-v2_default/src/firmware/nuttx/autopilot.yuneec
-#       - s3sitl/Yuneec-SITL-Simulation-Linux.zip
-#     skip_cleanup: true
-#     on:
-#       tags: true
-#       repo: YUNEEC/Firmware
-#       condition: $BUILD_TARGET = qgc_firmware
-#   - provider: releases
-#     api_key:
-#       secure: JOpzpCEINcASeG541EiIiMszhD6tmsIO6ok6JTQAGX8ALnG5yae5n8ztZ2f8BHabhAH78Y3TADr0f94e/4KKhbsSoiPXtIl0qHxgNat4nAF8t9cZjm2xsIfhn9u+TpPLjwgY7IR11h+Uricd/7dwII+d4x6ksUgnp1EnmEGWfnOyeSy7IY0an1sfzraXpqOGyW+kWYQx/UDMUMeW1wgr5R2uw6Cmay2XUnMdBhT4icicKGoGs+aG4ehrHKi1GUjgRqA/FYGT2staMh7fyhdsC/RJgJzZP15GC5X2ixR9rJKiiPdnA0nTDJvDDCEAlnJlpe5zgg/KCM9dkE/ovOOV47q3H0Qq0ccOdjunV8+ajgEMdk1i7dFdT76I02v/faW7JrqssPFXK1WMPCX0cVq55IMm9ZBDPoO8ZM8Eh8mQYP+juOoXW105bXtFK/AG2I08rBNEOUOhu4s5M2JRxumc0gAk3U1XpiXlZ8tXSgCR6xtyzi6mrq3D+tVkNtzUGXRp1vgIX+mx03q/MBrPq+k0/ACyBVXe3s+CNVltxjqOfjkLGfZ8NiBrW6vIRWAkcU571eWaXu4COATQnYJEiL45JfAtxOHX9+gqbQFjAtUEkRXTzUYjJA9gVgrHuv1nVE3rzG0kS0FUjImZlB2YfpKfaJl7zmV9kD7+WSYvpiDJ80Y=
-#     file: s3sitl/Yuneec-SITL-Simulation-macOS.zip
-#     skip_cleanup: true
-#     on:
-#       tags: true
-#       repo: YUNEEC/Firmware
-#       condition: $BUILD_TARGET = tests
+deploy:
+  - provider: releases
+    api_key:
+      secure: JOpzpCEINcASeG541EiIiMszhD6tmsIO6ok6JTQAGX8ALnG5yae5n8ztZ2f8BHabhAH78Y3TADr0f94e/4KKhbsSoiPXtIl0qHxgNat4nAF8t9cZjm2xsIfhn9u+TpPLjwgY7IR11h+Uricd/7dwII+d4x6ksUgnp1EnmEGWfnOyeSy7IY0an1sfzraXpqOGyW+kWYQx/UDMUMeW1wgr5R2uw6Cmay2XUnMdBhT4icicKGoGs+aG4ehrHKi1GUjgRqA/FYGT2staMh7fyhdsC/RJgJzZP15GC5X2ixR9rJKiiPdnA0nTDJvDDCEAlnJlpe5zgg/KCM9dkE/ovOOV47q3H0Qq0ccOdjunV8+ajgEMdk1i7dFdT76I02v/faW7JrqssPFXK1WMPCX0cVq55IMm9ZBDPoO8ZM8Eh8mQYP+juOoXW105bXtFK/AG2I08rBNEOUOhu4s5M2JRxumc0gAk3U1XpiXlZ8tXSgCR6xtyzi6mrq3D+tVkNtzUGXRp1vgIX+mx03q/MBrPq+k0/ACyBVXe3s+CNVltxjqOfjkLGfZ8NiBrW6vIRWAkcU571eWaXu4COATQnYJEiL45JfAtxOHX9+gqbQFjAtUEkRXTzUYjJA9gVgrHuv1nVE3rzG0kS0FUjImZlB2YfpKfaJl7zmV9kD7+WSYvpiDJ80Y=
+    file:
+      - build_tap-v2_default/src/firmware/nuttx/autopilot.px4
+      - build_tap-v2_default/src/firmware/nuttx/autopilot.yuneec
+      - s3sitl/Yuneec-SITL-Simulation-Linux.zip
+    skip_cleanup: true
+    on:
+      tags: true
+      repo: YUNEEC/Firmware
+      condition: $BUILD_TARGET = qgc_firmware
+  - provider: releases
+    api_key:
+      secure: JOpzpCEINcASeG541EiIiMszhD6tmsIO6ok6JTQAGX8ALnG5yae5n8ztZ2f8BHabhAH78Y3TADr0f94e/4KKhbsSoiPXtIl0qHxgNat4nAF8t9cZjm2xsIfhn9u+TpPLjwgY7IR11h+Uricd/7dwII+d4x6ksUgnp1EnmEGWfnOyeSy7IY0an1sfzraXpqOGyW+kWYQx/UDMUMeW1wgr5R2uw6Cmay2XUnMdBhT4icicKGoGs+aG4ehrHKi1GUjgRqA/FYGT2staMh7fyhdsC/RJgJzZP15GC5X2ixR9rJKiiPdnA0nTDJvDDCEAlnJlpe5zgg/KCM9dkE/ovOOV47q3H0Qq0ccOdjunV8+ajgEMdk1i7dFdT76I02v/faW7JrqssPFXK1WMPCX0cVq55IMm9ZBDPoO8ZM8Eh8mQYP+juOoXW105bXtFK/AG2I08rBNEOUOhu4s5M2JRxumc0gAk3U1XpiXlZ8tXSgCR6xtyzi6mrq3D+tVkNtzUGXRp1vgIX+mx03q/MBrPq+k0/ACyBVXe3s+CNVltxjqOfjkLGfZ8NiBrW6vIRWAkcU571eWaXu4COATQnYJEiL45JfAtxOHX9+gqbQFjAtUEkRXTzUYjJA9gVgrHuv1nVE3rzG0kS0FUjImZlB2YfpKfaJl7zmV9kD7+WSYvpiDJ80Y=
+    file: s3sitl/Yuneec-SITL-Simulation-macOS.zip
+    skip_cleanup: true
+    on:
+      tags: true
+      repo: YUNEEC/Firmware
+      condition: $BUILD_TARGET = tests
