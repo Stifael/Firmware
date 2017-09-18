@@ -339,10 +339,7 @@ HC_SR04::init()
 	}
 
 	if (!_enable_obsavoid_switch) {
-		if (start_pwm() == PX4_OK) {
-			_pwm_output_active = true;
-
-		} else {
+		if (start_pwm() != PX4_OK) {
 			PX4_ERR("Not able to start pwm.");
 			return PX4_ERROR;
 		}
@@ -682,6 +679,7 @@ HC_SR04::start_pwm()
 	}
 
 	::close(fd_pwm);
+	_pwm_output_active = true;
 	return PX4_OK;
 }
 
@@ -718,6 +716,7 @@ HC_SR04::stop_pwm()
 	}
 
 	_mf_cycle_counter = 0;
+	_pwm_output_active = false;
 
 }
 
@@ -757,16 +756,13 @@ HC_SR04::cycle()
 
 				if (_pwm_output_active) {
 					stop_pwm();
-					_pwm_output_active = false;
 				}
 
 			} else {
 
 				if (!_pwm_output_active) {
-					int ret = start_pwm();
-
-					if (ret == PX4_OK) {
-						_pwm_output_active = true;
+					if (start_pwm() != PX4_OK) {
+						PX4_ERR("Not able to start pwm.");
 					}
 				}
 
