@@ -514,7 +514,7 @@ MulticopterPositionControl::MulticopterPositionControl() :
 	_pos_sp_smoothing(this, "POS_SMOOTH", true),
 	_takeoff_ramp_time(this, "TKO_RAMP_T", true),
 	_nav_rad(this, "NAV_ACC_RAD", false),
-	_mis_yaw_error(this, "MIS_YAW_ERROR", false),
+	_mis_yaw_error(this, "MIS_YAW_ERR", false),
 	_vel_x_deriv(this, "VELD"),
 	_vel_y_deriv(this, "VELD"),
 	_vel_z_deriv(this, "VELD"),
@@ -2206,7 +2206,7 @@ void MulticopterPositionControl::control_auto(float dt)
 					float acc_track = (final_cruise_speed - vel_sp_along_track_prev) / dt;
 
 					/* if yaw offset is large, only accelerate with 0.5m/s^2 */
-					float acc = (fabsf(yaw_diff) >  _mis_yaw_error.get()) ? 0.5f : _acceleration_hor_manual.get();
+					float acc = (fabsf(yaw_diff) >  math::radians(_mis_yaw_error.get())) ? 0.5f : _acceleration_hor_manual.get();
 
 					if (acc_track > acc) {
 						vel_sp_along_track = acc * dt + vel_sp_along_track_prev;
