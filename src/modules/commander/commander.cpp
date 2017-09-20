@@ -3858,18 +3858,8 @@ set_main_state_rc(struct vehicle_status_s *status_local)
 		int new_mode = _flight_mode_slots[sp_man.mode_slot];
 		_desired_flight_mode = _flight_mode_slots[sp_man.mode_slot];
 
-		/* If parameter COM_LOW_BAT_ACT configures an automatic low battery reaction (not only Warning 0) prevent switching out of it unless switching to MANUAL, AUTO_RTL or AUTO_LAND. */
-		bool no_mode_switch_low_battery = low_bat_action != 0 && critical_battery_voltage_actions_done &&
-				new_mode != commander_state_s::MAIN_STATE_MANUAL &&
-				new_mode !=  commander_state_s::MAIN_STATE_AUTO_LAND &&
-				new_mode != commander_state_s::MAIN_STATE_AUTO_RTL;
-
-		/* if the UAV is outside the geofence radius or altitude and the action taken is either Loiter or RTL do not allow to switch to any mode other than AUTO_RTL. */
+		//  if the UAV is outside the geofence radius or altitude and the action taken is either Loiter or RTL do not allow to switch to any mode other than AUTO_RTL.
 		bool no_mode_switch_geofence = (geofence_loiter_on || geofence_rtl_on) && geofence_result.geofence_violated && new_mode != commander_state_s::MAIN_STATE_AUTO_RTL;
-
-		if (no_mode_switch_low_battery) {
-			return res;
-		}
 
 		if (no_mode_switch_geofence) {
 			mavlink_log_critical(&mavlink_log_pub, "Geofence violated. Please, switch to RTL.");
