@@ -372,8 +372,10 @@ private:
 	void velocity_controller();
 
 	void generate_manual_attitude();
+	void generate_manual_altitude_setpoints();
+	void generate_manual_position_setpoints();
 	void generate_manual_z_setpoints();
-	void generate_manual_xyz_yaw_setpoints();
+	void generate_manual_xy_setpoints();
 	float get_manual_yaw_setpoint(float yaw_sp, const float yaw);
 	void generate_offboard_positition_setpoints();
 	void generate_offboard_velocity_setpoints();
@@ -2369,10 +2371,9 @@ void MulticopterPositionControl::position_controller()
 		}
 	}
 
-	/* in auto the setpoint is already limited by the navigator */
-	if (!_control_mode.flag_control_auto_enabled) {
-		limit_altitude();
-	}
+	/* constrain altitude */
+	limit_altitude();
+
 
 	if (_run_alt_control) {
 		if (PX4_ISFINITE(_pos_sp(2))) {
@@ -2822,11 +2823,9 @@ MulticopterPositionControl::get_manual_yaw_setpoint(float yaw_sp, const float ya
 }
 
 void
-MulticopterPositionControl::generate_manual_xyz_yaw_setpoints()
+MulticopterPositionControl::generate_manual_xy_setpoints()
 {
 	matrix::Vector3f man_vel_sp = get_stick_velocity();
-	generate_manual_z_setpoints();
-	_yaw_sp = get_manual_yaw_setpoint(_yaw_sp, _yaw);
 
 	/* want to get/stay in position hold if user has xy stick in the middle (accounted for deadzone already) */
 	const bool pos_hold_desired = _control_mode.flag_control_position_enabled
@@ -2888,18 +2887,17 @@ MulticopterPositionControl::generate_manual_xyz_yaw_setpoints()
 void
 MulticopterPositionControl::generate_manual_z_setpoints()
 {
-
 	matrix::Vector3f man_vel_sp = get_stick_velocity();
 
 	/* want to get/stay in altitude hold if user has z stick in the middle (accounted for deadzone already) */
-	const bool alt_hold_desired = _control_mode.flag_control_altitude_enabled
-				      && (_user_intention_z == brake);
+	const bool alt_hold_desired = (_user_intention_z == brake);
 
-	/* check vertical hold engaged flag */
+	/* update altitude hold engaged flag if necessary */
 	if (_alt_hold_engaged) {
 		_alt_hold_engaged = alt_hold_desired;
+	}
 
-	} else {
+	if (!_alt_hold_engaged) {
 
 		const float max_acc_z =
 			(man_vel_sp(2) <= 0.0f) ?
@@ -2933,6 +2931,26 @@ MulticopterPositionControl::generate_manual_z_setpoints()
 		_vel_sp(2) = man_vel_sp(2);
 	}
 
+}
+
+void
+MulticopterPositionControl::generate_manual_altitude_setpoints()
+{
+
+	matrix::Vector3f man_vel_sp = get_stick_velocity();
+	_vel_sp(0) = man_vel_sp(0);
+	_vel_sp(1) = man_vel_sp(1);
+	generate_manual_z_setpoints();
+	_yaw_sp = get_manual_yaw_setpoint(_yaw_sp, _yaw);
+}
+
+void
+MulticopterPositionControl::generate_manual_position_setpoints()
+{
+
+	generate_manual_xy_setpoints();
+	generate_manual_z_setpoints();
+	_yaw_sp = get_manual_yaw_setpoint(_yaw_sp, _yaw);
 }
 
 matrix::Vector3f
@@ -3759,7 +3777,7 @@ MulticopterPositionControl::task_main()
 			}
 
 		case Flighttask::manual_position: {
-				generate_manual_xyz_yaw_setpoints();
+				generate_manual_xy_setpoints();
 				break;
 			}
 
