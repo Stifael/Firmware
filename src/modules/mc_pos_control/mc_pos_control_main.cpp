@@ -361,12 +361,16 @@ private:
 
 	void update_velocity_derivative();
 
+	/************* TODO remove */
 	void generate_offboard_setpoints();
 	void generate_manual_setpoints();
 	void generate_auto_setpoints();
+	void generate_attitude_setpoint();
+	/************* TODO remove */
+
 	void position_controller();
 	void velocity_controller();
-	void generate_attitude_setpoint();
+
 	void generate_manual_attitude();
 	void generate_manual_z_setpoints();
 	void generate_manual_xyz_yaw_setpoints();
