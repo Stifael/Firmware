@@ -201,7 +201,8 @@ private:
 		manual_position,
 		autonomous,
 		offboard_position,
-		offboard_altitude
+		offboard_velocity,
+		offboard_velocity_altitude
 	};
 
 	Flighttask _flighttask{Flighttask::manual_pure};
@@ -370,6 +371,16 @@ private:
 	void generate_manual_z_setpoints();
 	void generate_manual_xyz_yaw_setpoints();
 	float get_manual_yaw_setpoint(float yaw_sp, const float yaw);
+	void generate_offboard_positition_setpoints();
+	void generate_offboard_velocity_setpoints();
+	void generate_offboard_velocity_altitude_setpoints();
+	void generate_offboard_yaw_sp();
+	void generate_offboard_xyz_sp();
+	void gnereate_offboard_xy_sp();
+	void generate_offboard_z_sp();
+	void generate_offboard_vel_xyz_sp();
+	void generate_offboard_vel_xy_sp();
+	void generate_offboard_vel_z_sp();
 	void generate_attitude();
 	matrix::Vector3f get_stick_roll_pitch_yaw();
 
@@ -791,6 +802,16 @@ MulticopterPositionControl::poll_subscriptions()
 		_flighttask = Flighttask::autonomous;
 
 	} else if (_control_mode.flag_control_offboard_enabled) {
+
+		if (_control_mode.flag_control_position_enabled && _control_mode.flag_control_altitude_enabled) {
+			_flighttask = Flighttask::offboard_position;
+
+		} else if (_control_mode.flag_control_velocity_enabled && _control_mode.flag_control_climb_rate_enabled) {
+			_flighttask = Flighttask::offboard_velocity;
+
+		} else if (_control_mode.flag_control_velocity_enabled && _control_mode.flag_control_altitude_enabled) {
+			_flighttask = Flighttask::offboard_velocity_altitude;
+		}
 
 	} else {
 
@@ -3171,7 +3192,159 @@ void MulticopterPositionControl::generate_attitude()
 }
 
 void
-MulticopterPositionControl::generate_attitude_setpoint()
+MulticopterPositionControl::generate_offboard_yaw_sp()
+{
+	if (_pos_sp_triplet.current.yaw_valid) {
+		_yaw_sp = _pos_sp_triplet.current.yaw;
+
+	} else if (_pos_sp_triplet.current.yawspeed_valid) {
+		_yaw_sp = _yaw_sp + _pos_sp_triplet.current.yawspeed * _dt;
+	}
+}
+
+void
+MulticopterPositionControl::generate_offboard_z_sp()
+{
+	if (_pos_sp_triplet.current.alt_valid) {
+
+		/* control altitude as it is enabled */
+		_pos_sp(2) = _pos_sp_triplet.current.z;
+		_run_alt_control = true;
+
+		_hold_offboard_z = false;
+
+	}
+
+}
+
+void
+MulticopterPositionControl::generate_offboard_xyz_sp()
+{
+	if (_pos_sp_triplet.current.position_valid) {
+		/* control position */
+		_pos_sp(0) = _pos_sp_triplet.current.x;
+		_pos_sp(1) = _pos_sp_triplet.current.y;
+		_run_pos_control = true;
+
+		_hold_offboard_xy = false;
+
+	}
+
+	generate_offboard_z_sp();
+}
+
+void
+MulticopterPositionControl::generate_offboard_positition_setpoints()
+{
+
+	generate_offboard_yaw_sp();
+	generate_offboard_xyz_sp();
+}
+
+void
+MulticopterPositionControl::generate_offboard_vel_z_sp()
+{
+
+	if (_pos_sp_triplet.current.velocity_valid) {
+
+		/* reset alt setpoint to current altitude if needed */
+		reset_alt_sp();
+
+		if (fabsf(_pos_sp_triplet.current.vz) <= FLT_EPSILON
+		    && _local_pos.z_valid) {
+
+			if (!_hold_offboard_z) {
+				_pos_sp(2) = _pos(2);
+				_hold_offboard_z = true;
+			}
+
+			_run_alt_control = true;
+
+		} else {
+			/* set position setpoint move rate */
+			_vel_sp(2) = _pos_sp_triplet.current.vz;
+			_run_alt_control = false;
+
+			_hold_offboard_z = false;
+		}
+	}
+}
+
+void MulticopterPositionControl::generate_offboard_vel_xy_sp()
+{
+
+	if (_pos_sp_triplet.current.velocity_valid) {
+
+		/* control velocity */
+
+		/* reset position setpoint to current position if needed */
+		reset_pos_sp();
+
+		if (fabsf(_pos_sp_triplet.current.vx) <= FLT_EPSILON
+		    && fabsf(_pos_sp_triplet.current.vy) <= FLT_EPSILON
+		    && _local_pos.xy_valid) {
+
+			if (!_hold_offboard_xy) {
+				_pos_sp(0) = _pos(0);
+				_pos_sp(1) = _pos(1);
+				_hold_offboard_xy = true;
+			}
+
+			_run_pos_control = true;
+
+		} else {
+
+			if (_pos_sp_triplet.current.velocity_frame
+			    == position_setpoint_s::VELOCITY_FRAME_LOCAL_NED) {
+				/* set position setpoint move rate */
+				_vel_sp(0) = _pos_sp_triplet.current.vx;
+				_vel_sp(1) = _pos_sp_triplet.current.vy;
+
+			} else if (_pos_sp_triplet.current.velocity_frame
+				   == position_setpoint_s::VELOCITY_FRAME_BODY_NED) {
+				// Transform velocity command from body frame to NED frame
+				_vel_sp(0) = cosf(_yaw) * _pos_sp_triplet.current.vx
+					     - sinf(_yaw) * _pos_sp_triplet.current.vy;
+				_vel_sp(1) = sinf(_yaw) * _pos_sp_triplet.current.vx
+					     + cosf(_yaw) * _pos_sp_triplet.current.vy;
+
+			} else {
+				warn_rate_limited("Unknown velocity offboard coordinate frame");
+			}
+
+			_run_pos_control = false;
+
+			_hold_offboard_xy = false;
+		}
+	}
+}
+
+void
+MulticopterPositionControl::generate_offboard_vel_xyz_sp()
+{
+
+	generate_offboard_vel_xy_sp();
+	generate_offboard_vel_z_sp();
+}
+
+void
+MulticopterPositionControl::generate_offboard_velocity_setpoints()
+{
+	generate_offboard_vel_xyz_sp();
+	generate_offboard_yaw_sp();
+}
+
+void
+MulticopterPositionControl::generate_offboard_velocity_altitude_setpoints()
+{
+	generate_offboard_yaw_sp();
+	generate_offboard_vel_xy_sp();
+	generate_offboard_z_sp();
+}
+
+
+
+void MulticopterPositionControl::generate_attitude_setpoint()
 {
 	/* generate attitude setpoint from manual controls */
 	if (_control_mode.flag_control_manual_enabled
@@ -3591,9 +3764,20 @@ MulticopterPositionControl::task_main()
 				break;
 			}
 
-		case Flighttask::offboard_altitude:
-		case Flighttask::offboard_position:
-			break;
+		case Flighttask::offboard_position: {
+				generate_offboard_positition_setpoints();
+				break;
+			}
+
+		case Flighttask::offboard_velocity: {
+				generate_offboard_velocity_setpoints();
+				break;
+			}
+
+		case Flighttask::offboard_velocity_altitude: {
+				generate_offboard_velocity_altitude_setpoints();
+				break;
+			}
 		}
 
 //		if (_control_mode.flag_control_offboard_enabled) {
