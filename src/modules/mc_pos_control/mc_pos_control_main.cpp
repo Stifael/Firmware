@@ -390,9 +390,9 @@ private:
 	void generate_attitude();
 	matrix::Vector3f get_stick_roll_pitch_yaw();
 
+	void setpoints_interface_mapping();
+
 	matrix::Vector3f get_stick_velocity();
-
-
 
 	float get_cruising_speed_xy();
 
@@ -3362,6 +3362,21 @@ MulticopterPositionControl::generate_offboard_velocity_altitude_setpoints()
 	generate_offboard_yaw_sp();
 	generate_offboard_vel_xy_sp();
 	generate_offboard_z_sp();
+}
+
+void
+MulticopterPositionControl::setpoints_interface_mapping()
+{
+	_pos_sp(0) =  PX4_ISFINITE(_pos_sp(0)) ? _pos_sp(0) : _pos(0);
+	_pos_sp(1) =  PX4_ISFINITE(_pos_sp(1)) ? _pos_sp(0) : _pos(1);
+	_pos_sp(2) =  PX4_ISFINITE(_pos_sp(2)) ? _pos_sp(0) : _pos(2);
+
+	_vel_sp(0) =  PX4_ISFINITE(_vel_sp(0)) ? _vel_sp(0) : _vel(0);
+	_vel_sp(0) =  PX4_ISFINITE(_vel_sp(0)) ? _vel_sp(0) : _vel(0);
+	_vel_sp(0) =  PX4_ISFINITE(_vel_sp(0)) ? _vel_sp(0) : _vel(0);
+
+	_yaw_sp = PX4_ISFINITE(_yaw_sp) ? _yaw_sp : _yaw;
+
 }
 
 
