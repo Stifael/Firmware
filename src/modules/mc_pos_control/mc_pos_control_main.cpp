@@ -2413,6 +2413,7 @@ MulticopterPositionControl::position_controller()
 	_vel_sp_prev = _vel_sp;
 
 }
+
 void
 MulticopterPositionControl::velocity_controller()
 {
@@ -2780,6 +2781,7 @@ void MulticopterPositionControl::velocity_controller_old()
 		/* velocity error */
 		math::Vector < 3 > vel_err = _vel_sp - _vel;
 
+		/* TODO: add offboard acceleration mode */
 		if (_control_mode.flag_control_acceleration_enabled
 		    && _pos_sp_triplet.current.acceleration_valid) {
 			_thrust_sp = math::Vector<3>(_pos_sp_triplet.current.a_x,
@@ -3413,6 +3415,8 @@ void MulticopterPositionControl::generate_attitude()
 		_att_sp.pitch_body = rpy(1);
 		_att_sp.yaw_body = rpy(2);
 		_yaw_sp = _att_sp.yaw_body;
+		_thrust_int(0) = 0.0f;
+		_thrust_int(1) = 0.0f;
 
 	} else {
 		_att_sp.yaw_body = _yaw_sp;
