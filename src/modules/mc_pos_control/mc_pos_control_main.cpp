@@ -4100,12 +4100,12 @@ MulticopterPositionControl::task_main()
 			}
 
 		case Flighttask::manual_altitude: {
-				generate_manual_z_setpoints();
+				generate_manual_altitude_setpoints();
 				break;
 			}
 
 		case Flighttask::manual_position: {
-				generate_manual_xy_setpoints();
+				generate_manual_position_setpoints();
 				break;
 			}
 
