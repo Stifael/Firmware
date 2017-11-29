@@ -395,6 +395,7 @@ private:
 	void generate_attitude();
 	matrix::Vector3f get_stick_roll_pitch_yaw();
 
+	void publish_attitude();
 	void setpoints_interface_mapping();
 
 	matrix::Vector3f get_stick_velocity();
@@ -3501,12 +3502,7 @@ void MulticopterPositionControl::generate_attitude()
 	 * - if not armed
 	 */
 
-	if (_att_sp_pub != nullptr) {
-		orb_publish(_attitude_setpoint_id, _att_sp_pub, &_att_sp);
-
-	} else if (_attitude_setpoint_id) {
-		_att_sp_pub = orb_advertise(_attitude_setpoint_id, &_att_sp);
-	}
+	publish_attitude();
 
 
 }
@@ -3941,6 +3937,32 @@ bool MulticopterPositionControl::manual_wants_takeoff()
 }
 
 void
+void
+MulticopterPositionControl::publish_attitude() {
+
+
+	/* publish attitude setpoint
+	 * Do not publish if
+	 * - offboard is enabled but position/velocity/accel control is disabled,
+	 * in this case the attitude setpoint is published by the mavlink app.
+	 * - if the vehicle is a VTOL and it's just doing a transition (the VTOL attitude control module will generate
+	 * attitude setpoints for the transition).
+	 * - if not armed
+	 */
+	if (_control_mode.flag_armed &&
+	    (!(_control_mode.flag_control_offboard_enabled &&
+	       !(_control_mode.flag_control_position_enabled ||
+		 _control_mode.flag_control_velocity_enabled ||
+		 _control_mode.flag_control_acceleration_enabled)))) {
+
+		if (_att_sp_pub != nullptr) {
+			orb_publish(_attitude_setpoint_id, _att_sp_pub, &_att_sp);
+
+		} else if (_attitude_setpoint_id) {
+			_att_sp_pub = orb_advertise(_attitude_setpoint_id, &_att_sp);
+		}
+	}
+}
 MulticopterPositionControl::task_main()
 {
 	/*
