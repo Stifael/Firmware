@@ -3402,13 +3402,32 @@ MulticopterPositionControl::generate_offboard_velocity_altitude_setpoints()
 void
 MulticopterPositionControl::setpoints_interface_mapping()
 {
-	_pos_sp(0) =  PX4_ISFINITE(_pos_sp(0)) ? _pos_sp(0) : _pos(0);
-	_pos_sp(1) =  PX4_ISFINITE(_pos_sp(1)) ? _pos_sp(0) : _pos(1);
-	_pos_sp(2) =  PX4_ISFINITE(_pos_sp(2)) ? _pos_sp(0) : _pos(2);
+	for (int i = 0; i <= 2; i++) {
 
-	_vel_sp(0) =  PX4_ISFINITE(_vel_sp(0)) ? _vel_sp(0) : _vel(0);
-	_vel_sp(0) =  PX4_ISFINITE(_vel_sp(0)) ? _vel_sp(0) : _vel(0);
-	_vel_sp(0) =  PX4_ISFINITE(_vel_sp(0)) ? _vel_sp(0) : _vel(0);
+		if (PX4_ISFINITE(_pos_sp(i))) {
+
+			/* Position controller is active, but
+			 * don't use velocity feedforward if velocity
+			 * setpont is not finite */
+
+			if (!PX4_ISFINITE(_vel_ff(i))) {
+				_vel_ff(i) = 0.0f;
+			}
+
+		} else {
+
+			/* Position controller is not active */
+			_pos_sp(i) = _pos(i);
+
+			/* Don't use velocity controller */
+			if (!PX4_ISFINITE(_vel_ff(i))) {
+				_vel_ff(i) = _vel(i);
+				_thrust_int(i) = 0.0f;
+				_vel_err_d(i) = 0.0f;
+			}
+
+		}
+	}
 
 	_yaw_sp = PX4_ISFINITE(_yaw_sp) ? _yaw_sp : _yaw;
 
