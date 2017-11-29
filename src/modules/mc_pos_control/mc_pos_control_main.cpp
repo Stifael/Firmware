@@ -358,6 +358,8 @@ private:
 	void		reset_alt_sp();
 
 	void vel_sp_slewrate();
+	void vel_sp_slewrate_xy();
+	void vel_sp_slewrate_z();
 
 	void update_velocity_derivative();
 
@@ -1362,6 +1364,39 @@ MulticopterPositionControl::set_manual_acceleration_xy(matrix::Vector2f &stick_x
 }
 
 void
+MulticopterPositionControl::vel_sp_slewrate_z()
+{
+	/* limit vertical acceleration */
+	float acc_z = (_vel_sp(2) - _vel_sp_prev(2)) / _dt;
+	float max_acc_z;
+
+	max_acc_z = (acc_z < 0.0f) ?
+		    -_acceleration_state_dependent_z :
+		    _acceleration_state_dependent_z;
+
+	if (fabsf(acc_z) > fabsf(max_acc_z)) {
+		_vel_sp(2) = max_acc_z * _dt + _vel_sp_prev(2);
+	}
+}
+
+void
+MulticopterPositionControl::vel_sp_slewrate_xy()
+{
+
+	matrix::Vector2f vel_sp_xy(_vel_sp(0), _vel_sp(1));
+	matrix::Vector2f vel_sp_prev_xy(_vel_sp_prev(0), _vel_sp_prev(1));
+	matrix::Vector2f vel_xy(_vel(0), _vel(1));
+	matrix::Vector2f acc_xy = (vel_sp_xy - vel_sp_prev_xy) / _dt;
+
+	/* limit total horizontal acceleration */
+	if (acc_xy.length() > _acceleration_state_dependent_xy) {
+		vel_sp_xy = _acceleration_state_dependent_xy * acc_xy.normalized() * _dt
+			    + vel_sp_prev_xy;
+		_vel_sp(0) = vel_sp_xy(0);
+		_vel_sp(1) = vel_sp_xy(1);
+	}
+}
+
 MulticopterPositionControl::vel_sp_slewrate()
 {
 	matrix::Vector2f vel_sp_xy(_vel_sp(0), _vel_sp(1));
