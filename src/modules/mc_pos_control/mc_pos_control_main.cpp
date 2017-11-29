@@ -397,6 +397,7 @@ private:
 
 	void publish_attitude();
 	void set_idle_state();
+
 	void setpoints_interface_mapping();
 
 	matrix::Vector3f get_stick_velocity();
@@ -2419,10 +2420,8 @@ MulticopterPositionControl::position_controller()
 void
 MulticopterPositionControl::velocity_controller()
 {
-
 	/* velocity error */
 	math::Vector < 3 > vel_err = _vel_sp - _vel;
-
 
 	/* TODO: add offboard acceleration mode */
 	_thrust_sp = vel_err.emult(_params.vel_p)
@@ -3151,12 +3150,16 @@ MulticopterPositionControl::generate_manual_xy_setpoints()
 		}
 	}
 
+	if (_pos_hold_engaged) {
+		_vel_ff(0) = NAN;
+		_vel_ff(1) = NAN;
+	}
+
 	if (!_pos_hold_engaged) {
-		_pos_sp(0) = _pos(0);
-		_pos_sp(1) = _pos(1);
-		_run_pos_control = false; /* request velocity setpoint to be used, instead of position setpoint */
-		_vel_sp(0) = man_vel_sp(0);
-		_vel_sp(1) = man_vel_sp(1);
+		_pos_sp(0) = NAN;
+		_pos_sp(1) = NAN;
+		_vel_ff(0) = man_vel_sp(0);
+		_vel_ff(1) = man_vel_sp(1);
 	}
 
 
@@ -3465,7 +3468,6 @@ void MulticopterPositionControl::generate_attitude()
 		/* yaw already used to construct rot matrix, but actual rotation matrix can have different yaw near singularity */
 
 	}
-
 
 	/* copy quaternion setpoint to attitude setpoint topic */
 	matrix::Quatf q_sp = matrix::Eulerf(_att_sp.roll_body, _att_sp.pitch_body,
@@ -3934,6 +3936,7 @@ MulticopterPositionControl::set_idle_state()
 	publish_attitude();
 
 }
+
 void
 MulticopterPositionControl::publish_attitude()
 {
