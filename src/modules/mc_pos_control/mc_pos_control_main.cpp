@@ -368,6 +368,8 @@ private:
 	void generate_manual_setpoints();
 	void generate_auto_setpoints();
 	void generate_attitude_setpoint();
+	void position_controller_old();
+	void velocity_controller_old();
 	/************* TODO remove */
 
 	void position_controller();
