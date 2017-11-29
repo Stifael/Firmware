@@ -3871,6 +3871,12 @@ MulticopterPositionControl::task_main()
 			}
 		}
 
+		/* pipe setpoits according to interface
+		 * NAN = do not control
+		 */
+		setpoints_interface_mapping();
+
+
 //		if (_control_mode.flag_control_offboard_enabled) {
 //
 //			_mode_auto = false;
