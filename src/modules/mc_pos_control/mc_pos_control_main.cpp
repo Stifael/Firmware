@@ -288,6 +288,7 @@ private:
 	math::Vector<3> _pos_sp;
 	math::Vector<3> _vel;
 	math::Vector<3> _vel_sp;
+	math::Vector<3> _vel_ff;
 	math::Vector<3> _vel_prev;			/**< velocity on previous step */
 	math::Vector<3> _vel_sp_prev;
 	math::Vector<3> _vel_err_d;		/**< derivative of current velocity */
@@ -520,6 +521,7 @@ MulticopterPositionControl::MulticopterPositionControl() :
 	_pos_sp.zero();
 	_vel.zero();
 	_vel_sp.zero();
+	_vel_ff.zero();
 	_vel_prev.zero();
 	_vel_sp_prev.zero();
 	_vel_err_d.zero();
@@ -1399,6 +1401,7 @@ MulticopterPositionControl::vel_sp_slewrate_xy()
 	}
 }
 
+void
 MulticopterPositionControl::vel_sp_slewrate()
 {
 	matrix::Vector2f vel_sp_xy(_vel_sp(0), _vel_sp(1));
@@ -3211,11 +3214,14 @@ MulticopterPositionControl::generate_manual_z_setpoints()
 		}
 	}
 
+	if (_alt_hold_engaged) {
+		_vel_ff(2) = NAN;
+	}
+
 	/* set requested velocity setpoints */
 	if (!_alt_hold_engaged) {
-		_pos_sp(2) = _pos(2);
-		_run_alt_control = false; /* request velocity setpoint to be used, instead of altitude setpoint */
-		_vel_sp(2) = man_vel_sp(2);
+		_pos_sp(2) = NAN; /* request velocity setpoint to be used, instead of altitude setpoint */
+		_vel_ff(2) = man_vel_sp(2);
 	}
 
 }
@@ -3223,12 +3229,13 @@ MulticopterPositionControl::generate_manual_z_setpoints()
 void
 MulticopterPositionControl::generate_manual_altitude_setpoints()
 {
-
-	matrix::Vector3f man_vel_sp = get_stick_velocity();
-	_vel_sp(0) = man_vel_sp(0);
-	_vel_sp(1) = man_vel_sp(1);
 	generate_manual_z_setpoints();
-	_yaw_sp = get_manual_yaw_setpoint(_yaw_sp, _yaw);
+	//vel_sp_slewrate_z();
+	_yaw_sp = _att_sp.yaw_body;
+	_vel_ff(0) = NAN;
+	_vel_ff(1) = NAN;
+	_pos_sp(0) = NAN;
+	_pos_sp(1) = NAN;
 }
 
 void
