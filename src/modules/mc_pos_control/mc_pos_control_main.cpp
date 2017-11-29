@@ -2458,22 +2458,12 @@ MulticopterPositionControl::velocity_controller()
 		}
 	}
 
-	if (!_control_mode.flag_control_climb_rate_enabled
-	    && !_control_mode.flag_control_acceleration_enabled) {
-		_thrust_sp(2) = 0.0f;
-	}
-
 	/* limit thrust vector and check for saturation */
 	bool saturation_xy = false;
 	bool saturation_z = false;
 
 	/* limit min lift */
-	float thr_min = _params.thr_min;
-
-	if (!_control_mode.flag_control_velocity_enabled && thr_min < 0.0f) {
-		/* don't allow downside thrust direction in manual attitude mode */
-		thr_min = 0.0f;
-	}
+	float thr_min = math::max(_params.thr_min, 0.0f);
 
 	float tilt_max = _params.tilt_max_air;
 	float thr_max = _params.thr_max;
