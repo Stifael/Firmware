@@ -3829,6 +3829,13 @@ MulticopterPositionControl::task_main()
 		if (_flighttask == Flighttask::manual_pure) {
 
 			generate_manual_attitude();
+
+			/* reset states since not used */
+			_thrust_int.zero();
+			_thrust_sp.zero();
+			_vel_sp.zero();
+			_pos_sp.zero();
+
 			/* pure manual is a special mode
 			 * where no position/velocity controller is required */
 			continue;
