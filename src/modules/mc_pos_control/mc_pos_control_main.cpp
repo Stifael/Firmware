@@ -2389,7 +2389,28 @@ MulticopterPositionControl::generate_auto_setpoints()
 
 }
 
-void MulticopterPositionControl::position_controller()
+void
+MulticopterPositionControl::position_controller()
+{
+
+	_vel_sp = (_pos_sp - _pos).emult(_params.pos_p) + _vel_ff; //feedforward term
+
+	/* make sure velocity setpoint is constrained in all directions (xyz) */
+	float vel_norm_xy = sqrtf(
+				    _vel_sp(0) * _vel_sp(0) + _vel_sp(1) * _vel_sp(1));
+
+	if (vel_norm_xy > _vel_max_xy) {
+		_vel_sp(0) = _vel_sp(0) * _vel_max_xy / vel_norm_xy;
+		_vel_sp(1) = _vel_sp(1) * _vel_max_xy / vel_norm_xy;
+	}
+
+	_vel_sp(2) = math::constrain(_vel_sp(2), -_params.vel_max_up,
+				     _params.vel_max_down);
+
+	_vel_sp_prev = _vel_sp;
+
+}
+void MulticopterPositionControl::position_controller_old()
 {
 
 	/* run position & altitude controllers, if enabled (otherwise use already computed velocity setpoints) */
