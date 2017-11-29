@@ -2313,28 +2313,38 @@ MulticopterPositionControl::generate_auto_setpoints()
 			}
 
 			_pos_sp = pos_sp;
+			_vel_ff(0) = NAN;
+			_vel_ff(1) = NAN;
+			_vel_ff(2) = NAN;
 
 		} else if (_pos_sp_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_VELOCITY) {
 
 			float vel_xy_mag = sqrtf(_vel(0) * _vel(0) + _vel(1) * _vel(1));
 
 			if (vel_xy_mag > SIGMA_NORM) {
-				_vel_sp(0) = _vel(0) / vel_xy_mag * get_cruising_speed_xy();
-				_vel_sp(1) = _vel(1) / vel_xy_mag * get_cruising_speed_xy();
+				_vel_ff(0) = _vel(0) / vel_xy_mag * get_cruising_speed_xy();
+				_vel_ff(1) = _vel(1) / vel_xy_mag * get_cruising_speed_xy();
 
 			} else {
 				/* TODO: we should go in the direction we are heading
 				 * if current velocity is zero
 				 */
-				_vel_sp(0) = 0.0f;
-				_vel_sp(1) = 0.0f;
+				_vel_ff(0) = 0.0f;
+				_vel_ff(1) = 0.0f;
 			}
 
-			_run_pos_control = false;
+			_pos_sp(0) = NAN;
+			_pos_sp(1) = NAN;
+			_vel_ff(2) = NAN;
 
 		} else {
 			/* just go to the target point */;
 			_pos_sp = _curr_pos_sp;
+
+			_vel_ff(0) = NAN;
+			_vel_ff(1) = NAN;
+			_vel_ff(2) = NAN;
+
 
 			/* set max velocity to cruise */
 			_vel_max_xy = get_cruising_speed_xy();
@@ -2346,6 +2356,9 @@ MulticopterPositionControl::generate_auto_setpoints()
 
 			warn_rate_limited("Auto: Position setpoint not finite");
 			_pos_sp = _curr_pos_sp;
+			_vel_ff(0) = NAN;
+			_vel_ff(1) = NAN;
+			_vel_ff(2) = NAN;
 		}
 
 
@@ -2388,9 +2401,10 @@ MulticopterPositionControl::generate_auto_setpoints()
 
 	} else {
 		/* idle or triplet not valid, set velocity setpoint to zero */
-		_vel_sp.zero();
-		_run_pos_control = false;
-		_run_alt_control = false;
+		_vel_ff.zero();
+		_pos_sp(0) = NAN;
+		_pos_sp(1) = NAN;
+		_pos_sp(2) = NAN;
 	}
 
 }
@@ -4127,6 +4141,10 @@ MulticopterPositionControl::task_main()
 			/* pure manual is a special mode
 			 * where no position/velocity controller is required */
 			continue;
+		}
+
+		if (_flighttask != Flighttask::autonomous) {
+			_mode_auto = false;
 		}
 
 		switch (_flighttask) {
