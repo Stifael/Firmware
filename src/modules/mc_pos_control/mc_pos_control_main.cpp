@@ -396,6 +396,7 @@ private:
 	matrix::Vector3f get_stick_roll_pitch_yaw();
 
 	void publish_attitude();
+	void set_idle_state();
 	void setpoints_interface_mapping();
 
 	matrix::Vector3f get_stick_velocity();
@@ -2477,18 +2478,11 @@ MulticopterPositionControl::velocity_controller()
 	float tilt_max = _params.tilt_max_air;
 	float thr_max = _params.thr_max;
 
-	// We can only run the control if we're already in-air, have a takeoff setpoint,
-	// or if we're in offboard control.
-	// Otherwise, we should just bail out
-	if (_vehicle_land_detected.landed && !in_auto_takeoff()
-	    && !manual_wants_takeoff()) {
-		// Keep throttle low while still on ground.
-		thr_max = 0.0f;
 
-	} else if (!_control_mode.flag_control_manual_enabled
-		   && _pos_sp_triplet.current.valid
-		   && _pos_sp_triplet.current.type
-		   == position_setpoint_s::SETPOINT_TYPE_LAND) {
+	if (!_control_mode.flag_control_manual_enabled
+	    && _pos_sp_triplet.current.valid
+	    && _pos_sp_triplet.current.type
+	    == position_setpoint_s::SETPOINT_TYPE_LAND) {
 
 		/* adjust limits for landing mode */
 		/* limit max tilt and min lift when landing */
@@ -3937,8 +3931,22 @@ bool MulticopterPositionControl::manual_wants_takeoff()
 }
 
 void
+MulticopterPositionControl::set_idle_state()
+{
+
+	_att_sp.roll_body = 0.0f;
+	_att_sp.pitch_body = 0.0f;
+	_att_sp.yaw_body = _yaw;
+	_att_sp.yaw_sp_move_rate = 0.0f;
+	_att_sp.q_d_valid = false;
+	_att_sp.thrust = 0.0f;
+
+	publish_attitude();
+
+}
 void
-MulticopterPositionControl::publish_attitude() {
+MulticopterPositionControl::publish_attitude()
+{
 
 
 	/* publish attitude setpoint
@@ -3963,6 +3971,8 @@ MulticopterPositionControl::publish_attitude() {
 		}
 	}
 }
+
+void
 MulticopterPositionControl::task_main()
 {
 	/*
@@ -4210,6 +4220,18 @@ MulticopterPositionControl::task_main()
 //			/* store last velocity in case a mode switch to position control occurs */
 //			_vel_sp_prev = _vel;
 //		}
+
+		// We can only run the control if we're already in-air, have a takeoff setpoint,
+		// or if we're in offboard control.
+		// Otherwise, we should just bail out
+		if (_vehicle_land_detected.landed && !in_auto_takeoff()
+		    && !manual_wants_takeoff()) {
+			// stay in idle
+			set_idle_state();
+
+			/* don't run controllers */
+			continue;
+		}
 
 		/* Inputs: position setpoints and estimation
 		 * Outputs: velocity setpoints
