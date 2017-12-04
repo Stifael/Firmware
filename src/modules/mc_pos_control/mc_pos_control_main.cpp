@@ -3184,8 +3184,9 @@ MulticopterPositionControl::generate_manual_xy_setpoints()
 
 
 }
+
 void
-MulticopterPositionControl::generate_manual_z_setpoints()
+MulticopterPositionControl::generate_manual_z_setpoints(States &setpoint)
 {
 	matrix::Vector3f man_vel_sp = get_stick_velocity();
 
@@ -3197,7 +3198,13 @@ MulticopterPositionControl::generate_manual_z_setpoints()
 		_alt_hold_engaged = alt_hold_desired;
 	}
 
-	if (!_alt_hold_engaged) {
+
+	if (_alt_hold_engaged) {
+		/* we want to keep altitude */
+		setpoint.vel(2) = NAN;
+		setpoint.pos(2) = _pos_sp(2);
+
+	} else {
 
 		const float max_acc_z =
 			(man_vel_sp(2) <= 0.0f) ?
@@ -3217,23 +3224,18 @@ MulticopterPositionControl::generate_manual_z_setpoints()
 			const float delta_t = fabsf(_vel(2) / max_acc_z);
 
 			/* set desired postion setpoint assuming max acceleration */
-			_pos_sp(2) = _pos(2) + _vel(2) * delta_t
-				     + 0.5f * max_acc_z * delta_t *delta_t;
+			setpoint.pos(2) = _pos(2) + _vel(2) * delta_t
+					  + 0.5f * max_acc_z * delta_t *delta_t;
 
 			_alt_hold_engaged = true;
+
+		} else {
+
+			/* only have velocity setpoint mapped from sticks */
+			setpoint.pos(2) = NAN;
+			setpoint.vel(2) = man_vel_sp(2);
 		}
 	}
-
-	if (_alt_hold_engaged) {
-		_vel_ff(2) = NAN;
-	}
-
-	/* set requested velocity setpoints */
-	if (!_alt_hold_engaged) {
-		_pos_sp(2) = NAN; /* request velocity setpoint to be used, instead of altitude setpoint */
-		_vel_ff(2) = man_vel_sp(2);
-	}
-
 }
 
 void
