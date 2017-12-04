@@ -3688,7 +3688,7 @@ MulticopterPositionControl::setpoints_interface_mapping()
 		}
 	}
 
-	_yaw_sp = PX4_ISFINITE(_yaw_sp) ? _yaw_sp : _yaw;
+	_yaw_sp = PX4_ISFINITE(setpoint.yaw) ? setpoint.yaw : _yaw;
 
 }
 
