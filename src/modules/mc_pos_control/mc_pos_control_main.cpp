@@ -384,9 +384,9 @@ private:
 
 	void generate_manual_attitude();
 	void generate_manual_altitude_setpoints(States &setpoint);
-	void generate_manual_position_setpoints();
+	void generate_manual_position_setpoints(States &setpoint);
 	void generate_manual_z_setpoints(States &setpoint);
-	void generate_manual_xy_setpoints();
+	void generate_manual_xy_setpoints(States &setpoint);
 	float get_manual_yaw_setpoint(float yaw_sp, const float yaw);
 	void generate_offboard_positition_setpoints();
 	void generate_offboard_velocity_setpoints();
@@ -3119,7 +3119,7 @@ MulticopterPositionControl::get_manual_yaw_setpoint(float yaw_sp, const float ya
 }
 
 void
-MulticopterPositionControl::generate_manual_xy_setpoints()
+MulticopterPositionControl::generate_manual_xy_setpoints(States &setpoint)
 {
 	matrix::Vector3f man_vel_sp = get_stick_velocity();
 
@@ -3127,26 +3127,23 @@ MulticopterPositionControl::generate_manual_xy_setpoints()
 	const bool pos_hold_desired = _control_mode.flag_control_position_enabled
 				      && (_user_intention_xy == brake);
 
-	/* check horizontal hold engaged flag */
+	/* update hold flag */
 	if (_pos_hold_engaged) {
-
-		/* check if contition still true */
+		/* check if condition still true */
 		_pos_hold_engaged = pos_hold_desired;
+	}
 
-		/* use max acceleration */
-		if (_pos_hold_engaged) {
-			_acceleration_state_dependent_xy = _acceleration_hor_max.get();
-		}
+	if (_pos_hold_engaged) {
+		_acceleration_state_dependent_xy = _acceleration_hor_max.get();
+		setpoint.pos(0) = _pos_sp(0);
+		setpoint.pos(1) = _pos_sp(1);
 
 	} else {
 
 		/* check if we switch to pos_hold_engaged */
 		float vel_xy_mag = sqrtf(_vel(0) * _vel(0) + _vel(1) * _vel(1));
 		bool smooth_pos_transition = pos_hold_desired
-					     && (fabsf(
-							     _acceleration_hor_max.get()
-							     - _acceleration_state_dependent_xy)
-						 < FLT_EPSILON)
+					     && (fabsf(_acceleration_hor_max.get() - _acceleration_state_dependent_xy) < FLT_EPSILON)
 					     && (_params.hold_max_xy < FLT_EPSILON
 						 || vel_xy_mag < _params.hold_max_xy);
 
@@ -3163,26 +3160,16 @@ MulticopterPositionControl::generate_manual_xy_setpoints()
 			math::Vector < 2 > pos_sp = pos + vel * delta_t
 						    - vel.normalized() * 0.5f * _acceleration_hor_max.get()
 						    * delta_t *delta_t;
-			_pos_sp(0) = pos_sp(0);
-			_pos_sp(1) = pos_sp(1);
+			setpoint.pos(0) = pos_sp(0);
+			setpoint.pos(1) = pos_sp(1);
 
 			_pos_hold_engaged = true;
+
+		} else {
+			setpoint.vel(0) = man_vel_sp(0);
+			setpoint.vel(1) = man_vel_sp(1);
 		}
 	}
-
-	if (_pos_hold_engaged) {
-		_vel_ff(0) = NAN;
-		_vel_ff(1) = NAN;
-	}
-
-	if (!_pos_hold_engaged) {
-		_pos_sp(0) = NAN;
-		_pos_sp(1) = NAN;
-		_vel_ff(0) = man_vel_sp(0);
-		_vel_ff(1) = man_vel_sp(1);
-	}
-
-
 }
 
 void
@@ -3246,12 +3233,11 @@ MulticopterPositionControl::generate_manual_altitude_setpoints(States &setpoint)
 }
 
 void
-MulticopterPositionControl::generate_manual_position_setpoints()
+MulticopterPositionControl::generate_manual_position_setpoints(States &setpoint)
 {
-
-	generate_manual_xy_setpoints();
-	generate_manual_z_setpoints();
-	_yaw_sp = get_manual_yaw_setpoint(_yaw_sp, _yaw);
+	generate_manual_xy_setpoints(setpoint);
+	generate_manual_z_setpoints(setpoint);
+	setpoint.yaw = get_manual_yaw_setpoint(_yaw_sp, _yaw);
 }
 
 matrix::Vector3f
@@ -4174,7 +4160,7 @@ MulticopterPositionControl::task_main()
 			}
 
 		case Flighttask::manual_position: {
-				generate_manual_position_setpoints();
+				generate_manual_position_setpoints(setpoint);
 				break;
 			}
 
