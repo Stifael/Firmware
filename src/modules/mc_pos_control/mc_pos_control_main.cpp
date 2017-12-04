@@ -3648,7 +3648,6 @@ MulticopterPositionControl::generate_offboard_velocity_altitude_setpoints()
 
 void
 MulticopterPositionControl::setpoints_interface_mapping(const States &setpoint)
-MulticopterPositionControl::setpoints_interface_mapping()
 {
 
 	for (int i = 0; i <= 2; i++) {
@@ -4146,6 +4145,8 @@ MulticopterPositionControl::task_main()
 		if (_flighttask != Flighttask::autonomous) {
 			_mode_auto = false;
 		}
+
+		States setpoint;
 
 		switch (_flighttask) {
 		case Flighttask::manual_pure: {
