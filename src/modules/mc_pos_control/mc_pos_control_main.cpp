@@ -205,6 +205,12 @@ private:
 		offboard_velocity_altitude
 	};
 
+	struct States {
+		matrix::Vector3f pos = matrix::Vector3f(NAN, NAN, NAN);
+		matrix::Vector3f vel = matrix::Vector3f(NAN, NAN, NAN);
+		matrix::Vector3f acc = matrix::Vector3f(NAN, NAN, NAN);
+		float yaw = NAN;
+	};
 	Flighttask _flighttask{Flighttask::manual_pure};
 
 	manual_stick_input _user_intention_xy; /**< defines what the user intends to do derived from the stick input */
@@ -377,9 +383,9 @@ private:
 	void velocity_controller();
 
 	void generate_manual_attitude();
-	void generate_manual_altitude_setpoints();
+	void generate_manual_altitude_setpoints(States &setpoint);
 	void generate_manual_position_setpoints();
-	void generate_manual_z_setpoints();
+	void generate_manual_z_setpoints(States &setpoint);
 	void generate_manual_xy_setpoints();
 	float get_manual_yaw_setpoint(float yaw_sp, const float yaw);
 	void generate_offboard_positition_setpoints();
@@ -398,7 +404,7 @@ private:
 	void publish_attitude();
 	void set_idle_state();
 
-	void setpoints_interface_mapping();
+	void setpoints_interface_mapping(const States &setpoint);
 
 	matrix::Vector3f get_stick_velocity();
 
@@ -3231,15 +3237,13 @@ MulticopterPositionControl::generate_manual_z_setpoints()
 }
 
 void
-MulticopterPositionControl::generate_manual_altitude_setpoints()
+MulticopterPositionControl::generate_manual_altitude_setpoints(States &setpoint)
 {
-	generate_manual_z_setpoints();
+	generate_manual_z_setpoints(setpoint);
 	//vel_sp_slewrate_z();
-	_yaw_sp = _att_sp.yaw_body;
-	_vel_ff(0) = NAN;
-	_vel_ff(1) = NAN;
-	_pos_sp(0) = NAN;
-	_pos_sp(1) = NAN;
+	setpoint.yaw = _att_sp.yaw_body;
+	setpoint.vel(0) = setpoint.vel(1) = NAN;
+	setpoint.pos(0) = setpoint.pos(1) = NAN;
 }
 
 void
@@ -3659,30 +3663,42 @@ MulticopterPositionControl::generate_offboard_velocity_altitude_setpoints()
 }
 
 void
+MulticopterPositionControl::setpoints_interface_mapping(const States &setpoint)
 MulticopterPositionControl::setpoints_interface_mapping()
 {
+
 	for (int i = 0; i <= 2; i++) {
 
-		if (PX4_ISFINITE(_pos_sp(i))) {
+		if (PX4_ISFINITE(setpoint.pos(i))) {
+
+			_pos_sp(i) = setpoint.pos(i);
 
 			/* Position controller is active, but
 			 * don't use velocity feedforward if velocity
 			 * setpont is not finite */
 
-			if (!PX4_ISFINITE(_vel_ff(i))) {
+			if (!PX4_ISFINITE(setpoint.vel(i))) {
 				_vel_ff(i) = 0.0f;
+
+			} else {
+				_vel_ff(i) = setpoint.vel(i);
 			}
 
 		} else {
 
-			/* Position controller is not active */
+			/* Position controller is not active
+			 * -> Set setpoint just to current position since
+			 * we do not know better */
 			_pos_sp(i) = _pos(i);
 
 			/* Don't use velocity controller */
-			if (!PX4_ISFINITE(_vel_ff(i))) {
+			if (!PX4_ISFINITE(setpoint.vel(i))) {
 				_vel_ff(i) = _vel(i);
 				_thrust_int(i) = 0.0f;
 				_vel_err_d(i) = 0.0f;
+
+			} else {
+				_vel_ff(i) = setpoint.vel(i);
 			}
 
 		}
@@ -4154,7 +4170,7 @@ MulticopterPositionControl::task_main()
 			}
 
 		case Flighttask::manual_altitude: {
-				generate_manual_altitude_setpoints();
+				generate_manual_altitude_setpoints(setpoint);
 				break;
 			}
 
@@ -4187,7 +4203,7 @@ MulticopterPositionControl::task_main()
 		/* pipe setpoits according to interface
 		 * NAN = do not control
 		 */
-		setpoints_interface_mapping();
+		setpoints_interface_mapping(setpoint);
 
 
 //		if (_control_mode.flag_control_offboard_enabled) {
