@@ -3201,7 +3201,6 @@ MulticopterPositionControl::generate_manual_z_setpoints(States &setpoint)
 
 	if (_alt_hold_engaged) {
 		/* we want to keep altitude */
-		setpoint.vel(2) = NAN;
 		setpoint.pos(2) = _pos_sp(2);
 
 	} else {
@@ -3232,7 +3231,6 @@ MulticopterPositionControl::generate_manual_z_setpoints(States &setpoint)
 		} else {
 
 			/* only have velocity setpoint mapped from sticks */
-			setpoint.pos(2) = NAN;
 			setpoint.vel(2) = man_vel_sp(2);
 		}
 	}
@@ -3244,8 +3242,7 @@ MulticopterPositionControl::generate_manual_altitude_setpoints(States &setpoint)
 	generate_manual_z_setpoints(setpoint);
 	//vel_sp_slewrate_z();
 	setpoint.yaw = _att_sp.yaw_body;
-	setpoint.vel(0) = setpoint.vel(1) = NAN;
-	setpoint.pos(0) = setpoint.pos(1) = NAN;
+
 }
 
 void
