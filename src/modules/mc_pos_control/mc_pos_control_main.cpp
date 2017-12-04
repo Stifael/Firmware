@@ -3217,7 +3217,7 @@ MulticopterPositionControl::generate_manual_z_setpoints(States &setpoint)
 
 		} else {
 
-			/* only have velocity setpoint mapped from sticks */
+			/* velocity setpoint directly from stick input */
 			setpoint.vel(2) = man_vel_sp(2);
 		}
 	}
@@ -3657,32 +3657,32 @@ MulticopterPositionControl::setpoints_interface_mapping()
 
 			_pos_sp(i) = setpoint.pos(i);
 
-			/* Position controller is active, but
-			 * don't use velocity feedforward if velocity
-			 * setpont is not finite */
-
-			if (!PX4_ISFINITE(setpoint.vel(i))) {
-				_vel_ff(i) = 0.0f;
+			/* Check if velocity feed forward should be used */
+			if (PX4_ISFINITE(setpoint.vel(i))) {
+				_vel_ff(i) = setpoint.vel(i);
 
 			} else {
-				_vel_ff(i) = setpoint.vel(i);
+				_vel_ff(i) = 0.0f;
 			}
 
 		} else {
 
 			/* Position controller is not active
-			 * -> Set setpoint just to current position since
-			 * we do not know better */
+			 * -> Set setpoint just to current position since */
 			_pos_sp(i) = _pos(i);
 
-			/* Don't use velocity controller */
-			if (!PX4_ISFINITE(setpoint.vel(i))) {
+			/* check if velocity setpoint is provided */
+			if (PX4_ISFINITE(setpoint.vel(i))) {
+				_vel_ff(i) = setpoint.vel(i);
+
+			} else {
+				/* No position/velocity controller active.
+				 * Attitude will be generated from sticks directly
+				 */
 				_vel_ff(i) = _vel(i);
 				_thrust_int(i) = 0.0f;
 				_vel_err_d(i) = 0.0f;
 
-			} else {
-				_vel_ff(i) = setpoint.vel(i);
 			}
 
 		}
