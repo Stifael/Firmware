@@ -3408,6 +3408,11 @@ void MulticopterPositionControl::generate_attitude()
 		_yaw_sp = _att_sp.yaw_body;
 		_thrust_int(0) = 0.0f;
 		_thrust_int(1) = 0.0f;
+		/* copy quaternion setpoint to attitude setpoint topic */
+		matrix::Quatf q_sp = matrix::Eulerf(_att_sp.roll_body, _att_sp.pitch_body,
+						    _att_sp.yaw_body);
+		q_sp.copyTo(_att_sp.q_d);
+		_att_sp.q_d_valid = true;
 
 	} else {
 		_att_sp.yaw_body = _yaw_sp;
@@ -3471,12 +3476,6 @@ void MulticopterPositionControl::generate_attitude()
 		/* yaw already used to construct rot matrix, but actual rotation matrix can have different yaw near singularity */
 
 	}
-
-	/* copy quaternion setpoint to attitude setpoint topic */
-	matrix::Quatf q_sp = matrix::Eulerf(_att_sp.roll_body, _att_sp.pitch_body,
-					    _att_sp.yaw_body);
-	q_sp.copyTo(_att_sp.q_d);
-	_att_sp.q_d_valid = true;
 
 	/* fill and publish att_sp message */
 	_att_sp.thrust = _throttle;
