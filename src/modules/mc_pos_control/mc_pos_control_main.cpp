@@ -373,7 +373,6 @@ private:
 	/************* TODO remove */
 	void generate_offboard_setpoints();
 	void generate_manual_setpoints();
-	void generate_auto_setpoints();
 	void generate_attitude_setpoint();
 	void position_controller_old();
 	void velocity_controller_old();
@@ -381,6 +380,8 @@ private:
 
 	void position_controller();
 	void velocity_controller();
+
+	void generate_auto_setpoints(States &setpoint);
 
 	void generate_manual_attitude();
 	void generate_manual_altitude_setpoints(States &setpoint);
@@ -1828,7 +1829,7 @@ MulticopterPositionControl::generate_manual_setpoints()
 }
 
 void
-MulticopterPositionControl::generate_auto_setpoints()
+MulticopterPositionControl::generate_auto_setpoints(States &setpoint)
 {
 
 	/* reset position setpoint on AUTO mode activation or if we are not in MC mode */
@@ -1958,13 +1959,13 @@ MulticopterPositionControl::generate_auto_setpoints()
 		if (_pos_sp_triplet.current.yawspeed_valid
 		    && _pos_sp_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_FOLLOW_TARGET) {
 			_yaw_speed_sp = _pos_sp_triplet.current.yawspeed;
-			_yaw_sp = _yaw_sp + _yaw_speed_sp * _dt;
+			setpoint.yaw = _yaw_sp + _yaw_speed_sp * _dt;
 
 		} else if (PX4_ISFINITE(_pos_sp_triplet.current.yaw)) {
-			_yaw_sp = _pos_sp_triplet.current.yaw;
+			setpoint.yaw = _pos_sp_triplet.current.yaw;
 		}
 
-		float yaw_diff = _wrap_pi(_yaw_sp - _yaw);
+		float yaw_diff = _wrap_pi(setpoint.yaw - _yaw);
 
 		/* only follow previous-current-line for specific triplet type */
 		if (_pos_sp_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_POSITION  ||
@@ -2318,53 +2319,38 @@ MulticopterPositionControl::generate_auto_setpoints()
 				}
 			}
 
-			_pos_sp = pos_sp;
-			_vel_ff(0) = NAN;
-			_vel_ff(1) = NAN;
-			_vel_ff(2) = NAN;
+			setpoint.pos = matrix::Vector3f(pos_sp.data);
 
 		} else if (_pos_sp_triplet.current.type == position_setpoint_s::SETPOINT_TYPE_VELOCITY) {
 
 			float vel_xy_mag = sqrtf(_vel(0) * _vel(0) + _vel(1) * _vel(1));
 
 			if (vel_xy_mag > SIGMA_NORM) {
-				_vel_ff(0) = _vel(0) / vel_xy_mag * get_cruising_speed_xy();
-				_vel_ff(1) = _vel(1) / vel_xy_mag * get_cruising_speed_xy();
+				setpoint.vel(0) = _vel(0) / vel_xy_mag * get_cruising_speed_xy();
+				setpoint.vel(1) = _vel(1) / vel_xy_mag * get_cruising_speed_xy();
 
 			} else {
 				/* TODO: we should go in the direction we are heading
 				 * if current velocity is zero
 				 */
-				_vel_ff(0) = 0.0f;
-				_vel_ff(1) = 0.0f;
+				setpoint.vel(0) = 0.0f;
+				setpoint.vel(1) = 0.0f;
 			}
-
-			_pos_sp(0) = NAN;
-			_pos_sp(1) = NAN;
-			_vel_ff(2) = NAN;
 
 		} else {
 			/* just go to the target point */;
-			_pos_sp = _curr_pos_sp;
-
-			_vel_ff(0) = NAN;
-			_vel_ff(1) = NAN;
-			_vel_ff(2) = NAN;
-
+			setpoint.pos = matrix::Vector3f(_curr_pos_sp.data);
 
 			/* set max velocity to cruise */
 			_vel_max_xy = get_cruising_speed_xy();
 		}
 
 		/* sanity check */
-		if (!(PX4_ISFINITE(_pos_sp(0)) && PX4_ISFINITE(_pos_sp(1)) &&
-		      PX4_ISFINITE(_pos_sp(2)))) {
+		if (!(PX4_ISFINITE(setpoint.pos(0)) && PX4_ISFINITE(setpoint.pos(1)) &&
+		      PX4_ISFINITE(setpoint.pos(2)))) {
 
 			warn_rate_limited("Auto: Position setpoint not finite");
-			_pos_sp = _curr_pos_sp;
-			_vel_ff(0) = NAN;
-			_vel_ff(1) = NAN;
-			_vel_ff(2) = NAN;
+			setpoint.pos = matrix::Vector3f(_curr_pos_sp.data);
 		}
 
 
@@ -2407,10 +2393,7 @@ MulticopterPositionControl::generate_auto_setpoints()
 
 	} else {
 		/* idle or triplet not valid, set velocity setpoint to zero */
-		_vel_ff.zero();
-		_pos_sp(0) = NAN;
-		_pos_sp(1) = NAN;
-		_pos_sp(2) = NAN;
+		setpoint.vel.zero();
 	}
 
 }
@@ -3229,7 +3212,6 @@ MulticopterPositionControl::generate_manual_altitude_setpoints(States &setpoint)
 	generate_manual_z_setpoints(setpoint);
 	//vel_sp_slewrate_z();
 	setpoint.yaw = _att_sp.yaw_body;
-
 }
 
 void
@@ -3433,8 +3415,7 @@ void MulticopterPositionControl::generate_attitude()
 		}
 
 		/* vector of desired yaw direction in XY plane, rotated by PI/2 */
-		math::Vector < 3
-		> y_C(-sinf(_att_sp.yaw_body), cosf(_att_sp.yaw_body), 0.0f);
+		math::Vector <3> y_C(-sinf(_att_sp.yaw_body), cosf(_att_sp.yaw_body), 0.0f);
 
 		if (fabsf(body_z(2)) > SIGMA_SINGLE_OP) {
 			/* desired body_x axis, orthogonal to body_z */
@@ -4165,7 +4146,7 @@ MulticopterPositionControl::task_main()
 			}
 
 		case Flighttask::autonomous: {
-				generate_auto_setpoints();
+				generate_auto_setpoints(setpoint);
 				break;
 			}
 
