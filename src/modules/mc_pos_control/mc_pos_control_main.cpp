@@ -389,16 +389,16 @@ private:
 	void generate_manual_z_setpoints(States &setpoint);
 	void generate_manual_xy_setpoints(States &setpoint);
 	float get_manual_yaw_setpoint(float yaw_sp, const float yaw);
-	void generate_offboard_positition_setpoints();
-	void generate_offboard_velocity_setpoints();
-	void generate_offboard_velocity_altitude_setpoints();
-	void generate_offboard_yaw_sp();
-	void generate_offboard_xyz_sp();
-	void gnereate_offboard_xy_sp();
-	void generate_offboard_z_sp();
-	void generate_offboard_vel_xyz_sp();
-	void generate_offboard_vel_xy_sp();
-	void generate_offboard_vel_z_sp();
+	void generate_offboard_positition_setpoints(States &setpoint);
+	void generate_offboard_velocity_setpoints(States &setpoint);
+	void generate_offboard_velocity_altitude_setpoints(States &setpoint);
+	void generate_offboard_yaw_sp(States &setpoint);
+	void generate_offboard_xyz_sp(States &setpoint);
+	void gnereate_offboard_xy_sp(States &setpoint);
+	void generate_offboard_z_sp(States &setpoint);
+	void generate_offboard_vel_xyz_sp(States &setpoint);
+	void generate_offboard_vel_xy_sp(States &setpoint);
+	void generate_offboard_vel_z_sp(States &setpont);
 	void generate_attitude();
 	matrix::Vector3f get_stick_roll_pitch_yaw();
 
@@ -3477,24 +3477,23 @@ void MulticopterPositionControl::generate_attitude()
 }
 
 void
-MulticopterPositionControl::generate_offboard_yaw_sp()
+MulticopterPositionControl::generate_offboard_yaw_sp(States &setpoint)
 {
 	if (_pos_sp_triplet.current.yaw_valid) {
-		_yaw_sp = _pos_sp_triplet.current.yaw;
+		setpoint.yaw = _pos_sp_triplet.current.yaw;
 
 	} else if (_pos_sp_triplet.current.yawspeed_valid) {
-		_yaw_sp = _yaw_sp + _pos_sp_triplet.current.yawspeed * _dt;
+		setpoint.yaw = _yaw_sp + _pos_sp_triplet.current.yawspeed * _dt;
 	}
 }
 
 void
-MulticopterPositionControl::generate_offboard_z_sp()
+MulticopterPositionControl::generate_offboard_z_sp(States &setpoint)
 {
 	if (_pos_sp_triplet.current.alt_valid) {
 
 		/* control altitude as it is enabled */
-		_pos_sp(2) = _pos_sp_triplet.current.z;
-		_run_alt_control = true;
+		setpoint.pos(2) = _pos_sp_triplet.current.z;
 
 		_hold_offboard_z = false;
 
@@ -3503,31 +3502,29 @@ MulticopterPositionControl::generate_offboard_z_sp()
 }
 
 void
-MulticopterPositionControl::generate_offboard_xyz_sp()
+MulticopterPositionControl::generate_offboard_xyz_sp(States &setpoint)
 {
 	if (_pos_sp_triplet.current.position_valid) {
 		/* control position */
-		_pos_sp(0) = _pos_sp_triplet.current.x;
-		_pos_sp(1) = _pos_sp_triplet.current.y;
-		_run_pos_control = true;
+		setpoint.pos(0) = _pos_sp_triplet.current.x;
+		setpoint.pos(1) = _pos_sp_triplet.current.y;
 
 		_hold_offboard_xy = false;
 
 	}
 
-	generate_offboard_z_sp();
+	generate_offboard_z_sp(setpoint);
 }
 
 void
-MulticopterPositionControl::generate_offboard_positition_setpoints()
+MulticopterPositionControl::generate_offboard_positition_setpoints(States &setpoint)
 {
-
-	generate_offboard_yaw_sp();
-	generate_offboard_xyz_sp();
+	generate_offboard_yaw_sp(setpoint);
+	generate_offboard_xyz_sp(setpoint);
 }
 
 void
-MulticopterPositionControl::generate_offboard_vel_z_sp()
+MulticopterPositionControl::generate_offboard_vel_z_sp(States &setpoint)
 {
 
 	if (_pos_sp_triplet.current.velocity_valid) {
@@ -3539,23 +3536,20 @@ MulticopterPositionControl::generate_offboard_vel_z_sp()
 		    && _local_pos.z_valid) {
 
 			if (!_hold_offboard_z) {
-				_pos_sp(2) = _pos(2);
+				setpoint.pos(2) = _pos(2);
 				_hold_offboard_z = true;
 			}
 
-			_run_alt_control = true;
-
 		} else {
 			/* set position setpoint move rate */
-			_vel_sp(2) = _pos_sp_triplet.current.vz;
-			_run_alt_control = false;
+			setpoint.vel(2) = _pos_sp_triplet.current.vz;
 
 			_hold_offboard_z = false;
 		}
 	}
 }
 
-void MulticopterPositionControl::generate_offboard_vel_xy_sp()
+void MulticopterPositionControl::generate_offboard_vel_xy_sp(States &setpoint)
 {
 
 	if (_pos_sp_triplet.current.velocity_valid) {
@@ -3570,34 +3564,30 @@ void MulticopterPositionControl::generate_offboard_vel_xy_sp()
 		    && _local_pos.xy_valid) {
 
 			if (!_hold_offboard_xy) {
-				_pos_sp(0) = _pos(0);
-				_pos_sp(1) = _pos(1);
+				setpoint.pos(0) = _pos(0);
+				setpoint.pos(1) = _pos(1);
 				_hold_offboard_xy = true;
 			}
-
-			_run_pos_control = true;
 
 		} else {
 
 			if (_pos_sp_triplet.current.velocity_frame
 			    == position_setpoint_s::VELOCITY_FRAME_LOCAL_NED) {
 				/* set position setpoint move rate */
-				_vel_sp(0) = _pos_sp_triplet.current.vx;
-				_vel_sp(1) = _pos_sp_triplet.current.vy;
+				setpoint.vel(0) = _pos_sp_triplet.current.vx;
+				setpoint.vel(1) = _pos_sp_triplet.current.vy;
 
 			} else if (_pos_sp_triplet.current.velocity_frame
 				   == position_setpoint_s::VELOCITY_FRAME_BODY_NED) {
 				// Transform velocity command from body frame to NED frame
-				_vel_sp(0) = cosf(_yaw) * _pos_sp_triplet.current.vx
-					     - sinf(_yaw) * _pos_sp_triplet.current.vy;
-				_vel_sp(1) = sinf(_yaw) * _pos_sp_triplet.current.vx
-					     + cosf(_yaw) * _pos_sp_triplet.current.vy;
+				setpoint.vel(0) = cosf(_yaw) * _pos_sp_triplet.current.vx
+						  - sinf(_yaw) * _pos_sp_triplet.current.vy;
+				setpoint.vel(1) = sinf(_yaw) * _pos_sp_triplet.current.vx
+						  + cosf(_yaw) * _pos_sp_triplet.current.vy;
 
 			} else {
 				warn_rate_limited("Unknown velocity offboard coordinate frame");
 			}
-
-			_run_pos_control = false;
 
 			_hold_offboard_xy = false;
 		}
@@ -3605,26 +3595,26 @@ void MulticopterPositionControl::generate_offboard_vel_xy_sp()
 }
 
 void
-MulticopterPositionControl::generate_offboard_vel_xyz_sp()
+MulticopterPositionControl::generate_offboard_vel_xyz_sp(States &setpoint)
 {
 
-	generate_offboard_vel_xy_sp();
-	generate_offboard_vel_z_sp();
+	generate_offboard_vel_xy_sp(setpoint);
+	generate_offboard_vel_z_sp(setpoint);
 }
 
 void
-MulticopterPositionControl::generate_offboard_velocity_setpoints()
+MulticopterPositionControl::generate_offboard_velocity_setpoints(States &setpoint)
 {
-	generate_offboard_vel_xyz_sp();
-	generate_offboard_yaw_sp();
+	generate_offboard_vel_xyz_sp(setpoint);
+	generate_offboard_yaw_sp(setpoint);
 }
 
 void
-MulticopterPositionControl::generate_offboard_velocity_altitude_setpoints()
+MulticopterPositionControl::generate_offboard_velocity_altitude_setpoints(States &setpoint)
 {
-	generate_offboard_yaw_sp();
-	generate_offboard_vel_xy_sp();
-	generate_offboard_z_sp();
+	generate_offboard_yaw_sp(setpoint);
+	generate_offboard_vel_xy_sp(setpoint);
+	generate_offboard_z_sp(setpoint);
 }
 
 void
@@ -4151,17 +4141,17 @@ MulticopterPositionControl::task_main()
 			}
 
 		case Flighttask::offboard_position: {
-				generate_offboard_positition_setpoints();
+				generate_offboard_positition_setpoints(setpoint);
 				break;
 			}
 
 		case Flighttask::offboard_velocity: {
-				generate_offboard_velocity_setpoints();
+				generate_offboard_velocity_setpoints(setpoint);
 				break;
 			}
 
 		case Flighttask::offboard_velocity_altitude: {
-				generate_offboard_velocity_altitude_setpoints();
+				generate_offboard_velocity_altitude_setpoints(setpoint);
 				break;
 			}
 		}
