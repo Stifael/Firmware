@@ -75,8 +75,6 @@ private:
 	 */
 	void set_loiter_position();
 
-	control::BlockParamInt _param_yawmode;
-
 	bool _loiter_pos_set{false};
 };
 
