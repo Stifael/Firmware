@@ -43,8 +43,7 @@
 #include "navigator.h"
 
 Loiter::Loiter(Navigator *navigator, const char *name) :
-	MissionBlock(navigator, name),
-	_param_yawmode(this, "MIS_YAWMODE", false)
+	MissionBlock(navigator, name)
 {
 }
 
