@@ -234,6 +234,7 @@ private:
 	control::BlockParamFloat _jerk_hor_min; /**< minimum jerk in manual controlled mode when braking to zero */
 	control::BlockParamFloat _start_braking_distance; /**< distance from an obstacle at which braking starts */
 	control::BlockParamFloat _mis_yaw_error; /**< yaw error threshold that is used in mission as update criteria */
+	control::BlockParamInt _yaw_mode; /**< Yaw modes: towards/from home; towards target; set by waypoint; normal */
 	control::BlockDerivative _vel_x_deriv;
 	control::BlockDerivative _vel_y_deriv;
 	control::BlockDerivative _vel_z_deriv;
@@ -474,7 +475,6 @@ private:
 	 */
 	void updateConstraints(Controller::Constraints &constrains);
 
-
 	matrix::Vector3f get_stick_roll_pitch(float &yaw_sp);
 
 	void publish_attitude();
@@ -482,6 +482,8 @@ private:
 	void publish_local_pos_sp();
 
 	void obstacle_avoidance(float altitude_above_home);
+
+	void yaw_from_mode_auto(); /**< MIS_YAWMODE defined the heading of the vehicle */
 
 	/**
 	 * Shim for calling task_main from task_create.
@@ -564,6 +566,7 @@ MulticopterPositionControl::MulticopterPositionControl() :
 	_jerk_hor_min(this, "JERK_MIN", true),
 	_start_braking_distance(this, "DIST_BRAKE", true),
 	_mis_yaw_error(this, "MIS_YAW_ERR", false),
+	_yaw_mode(this, "MIS_YAWMODE", false),
 	_vel_x_deriv(this, "VELD"),
 	_vel_y_deriv(this, "VELD"),
 	_vel_z_deriv(this, "VELD"),
@@ -2301,7 +2304,12 @@ void MulticopterPositionControl::control_auto()
 			}
 
 		} else if (PX4_ISFINITE(_pos_sp_triplet.current.yaw)) {
+			// Navigator has a valid yaw. Yaw-mode is ignored.
 			_att_sp.yaw_body = _pos_sp_triplet.current.yaw;
+
+		} else {
+			// No valid yaw available. Yaw is defined by the yaw mode
+			yaw_from_mode_auto();
 		}
 
 		/* only follow previous-current-line for specific triplet type */
@@ -3494,6 +3502,57 @@ bool MulticopterPositionControl::manual_wants_takeoff()
 
 	// Manual takeoff is triggered if the throttle stick is above 65%.
 	return (has_manual_control_present && _manual.z > 0.65f);
+}
+
+void MulticopterPositionControl::yaw_from_mode_auto()
+{
+	matrix::Vector2f v; // Vector that points towards desired location
+
+	switch (_yaw_mode.get()) {
+	case 0: {
+			// Heading is set by waypoint.
+			// Don't have anything to do because
+			// it is already taken care by a valid triplet yaw.
+			break;
+		}
+
+	case 1: {
+			// Heading is always towards the current waypoint.
+			v = matrix::Vector2f(&_curr_pos_sp(0)) - matrix::Vector2f(&_pos(0));
+			break;
+		}
+
+	case 2: {
+			// Heading towards home
+			if (_home_pos.valid_hpos) {
+				v = matrix::Vector2f(_home_pos.x, _home_pos.y) -  matrix::Vector2f(&_pos(0));
+			}
+
+			break;
+		}
+
+	case 3: {
+			// Heading away from home
+			if (_home_pos.valid_hpos) {
+				v = matrix::Vector2f(&_pos(0)) -  matrix::Vector2f(_home_pos.x, _home_pos.y);
+			}
+
+			break;
+		}
+	}
+
+	// We only adjust yaw if outside of acceptance radius.
+	// This prevents excessive yawing.
+	if (v.length() > _nav_rad.get()) {
+		v.normalize();
+		// To find yaw: take dot product of x = (1,0) and v
+		// and multiply by the sign given of cross product of x and v.
+		// Dot product: (x(0)*v(0)+(x(1)*v(1)) = v(0)
+		// Cross product: x(0)*v(1) - v(0)*x(1) = v(1)
+		_att_sp.yaw_body = math::sign(v(1)) * _wrap_pi(acosf(v(0)));
+		//PX4_INFO("sp: %.5f, yaw: %.5f",(double)_att_sp.yaw_body, (double)_yaw);
+
+	}
 }
 
 void
