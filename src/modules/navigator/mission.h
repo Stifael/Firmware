@@ -230,7 +230,6 @@ private:
 	control::BlockParamFloat _param_dist_1wp;
 	control::BlockParamFloat _param_dist_between_wps;
 	control::BlockParamInt _param_altmode;
-	control::BlockParamInt _param_yawmode;
 	control::BlockParamInt _param_mnt_yaw_ctl;
 
 	struct mission_s _offboard_mission {};
