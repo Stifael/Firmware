@@ -65,7 +65,6 @@ Mission::Mission(Navigator *navigator, const char *name) :
 	_param_dist_1wp(this, "MIS_DIST_1WP", false),
 	_param_dist_between_wps(this, "MIS_DIST_WPS", false),
 	_param_altmode(this, "MIS_ALTMODE", false),
-	_param_yawmode(this, "MIS_YAWMODE", false),
 	_param_mnt_yaw_ctl(this, "MIS_MNT_YAW_CTL", false)
 {
 }
@@ -996,11 +995,12 @@ Mission::heading_sp_update()
 			}
 
 		case vehicle_roi_s::ROI_WPNEXT: {
+				// TODO: close diff to upstream. ROI_WPNEXT not supported for yuneec
 				// ROI is current waypoint. Vehcile needs to point towards current waypoint
-				point_to_latlon[0] = pos_sp_triplet->current.lat;
-				point_to_latlon[1] = pos_sp_triplet->current.lon;
+				//point_to_latlon[0] = pos_sp_triplet->current.lat;
+				//point_to_latlon[1] = pos_sp_triplet->current.lon;
 				// Add the gimbal's yaw offset
-				yaw_offset = _navigator->get_vroi().yaw_offset;
+				//yaw_offset = _navigator->get_vroi().yaw_offset;
 				break;
 			}
 
