@@ -603,3 +603,18 @@ PARAM_DEFINE_FLOAT(MPC_TKO_RAMP_T, 0.4f);
  * @group Multicopter Position Control
  */
 PARAM_DEFINE_FLOAT(MPC_DIST_BRAKE, 8.0f);
+
+/**
+ * Yaw mode.
+ *
+ * Specifies the heading during Auto/Manual flight.
+ *
+ * @min 0
+ * @max 3
+ * @value 0 Auto: set by waypoint; Manual: set by heading when switched to 0
+ * @value 1 Auto: towards waypoint; Manual
+ * @value 2 Auto/Manual: towards home
+ * @value 3 Auto/Manual: away from home
+ * @group Mission
+ */
+PARAM_DEFINE_INT32(MPC_YAWMODE, 1);
